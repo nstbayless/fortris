@@ -99,7 +99,7 @@ function placement_placable()
   local placement = g_state.placement
 
   -- check for direct collision with any other obstruction
-  if not board_test({
+  if not board_test_free({
     x=g_state.placement.x,
     y=g_state.placement.y,
     grid=g_state.placement.grid,
@@ -133,7 +133,11 @@ function next_placement()
     x = math.floor(x - width2d(base.grid) / 2),
     y = math.floor(y - height2d(base.grid) / 2),
     color = indexof(k_block_colors, base.color),
-    grid = base.grid
+    grid = base.grid,
+
+    -- direction turrets will be laid / 'facing'
+    dx = 1,
+    dy = 1
   }
 end
 
@@ -159,32 +163,46 @@ function draw_placement()
   love.graphics.setColor(1, 1, 1, 1)
 end
 
+function placement_emplace()
+  local placement = g_state.placement
+  local success = board_emplace({
+    x = placement.x,
+    y = placement.y,
+    grid = placement.grid,
+    cmask = K_OBSTRUCTION,
+    wmask = K_WALL_MASK,
+    value = placement.color
+  })
+  assert(success)
+
+  turret_emplace_potentials_at_grid(placement.x, placement.y, placement.grid, placement.dx, placement.dy)
+
+  next_placement()
+end
+
 function update_placement(dx, dy, dr)
   if g_state.placement then
     local proposed_placement = table.clone(g_state.placement)
+
+    -- translate
     proposed_placement.x = proposed_placement.x + dx
     proposed_placement.y = proposed_placement.y + dy
+
+    -- rotate
     if dr == 1 then
       proposed_placement.grid = rotate_2d_array_cw(proposed_placement.grid)
+      proposed_placement.dx, proposed_placement.dy = proposed_placement.dy, -proposed_placement.dx
     end
     if dr == -1 then
       proposed_placement.grid = rotate_2d_array_ccw(proposed_placement.grid)
+      proposed_placement.dx, proposed_placement.dy = -proposed_placement.dy, proposed_placement.dx
     end
 
     g_state.placement = proposed_placement
 
     if key_pressed("space") then
       if placement_placable() then
-        if board_emplace({
-            x = g_state.placement.x,
-            y = g_state.placement.y,
-            grid = g_state.placement.grid,
-            cmask = K_OBSTRUCTION,
-            wmask = K_WALL_MASK,
-            value = g_state.placement.color
-          }) then
-          next_placement()
-        end
+        placement_emplace()
       end
     end
   end

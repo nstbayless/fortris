@@ -15,6 +15,7 @@ require("src.input")
 require("src.pathfinding")
 require("src.board")
 require("src.static")
+require("src.turret")
 require("src.sovereignty")
 require("src.placement")
 require("src.camera")
@@ -24,23 +25,33 @@ require("src.unit")
 function init_state()
   g_state = {
     time = 0,
+    spawn_timer = 0
   }
   pf_init()
   board_init()
   static_init()
+  unit_init()
   svy_init()
   init_placement()
   camera_init()
 end
 
 function love.load()
+  math.randomseed(0)
+  for i = 1,10 do
+    math.random()
+  end
+
   love.graphics.setDefaultFilter("linear", "nearest")
-  g_images.grass = love.graphics.newImage("resources/images/non-commercial/checkered-grass.png")
-  g_images.castle = love.graphics.newImage("resources/images/oga/wyrmsun-cc0/town_hall.png")
-  g_images.goblin = new_sprite("resources/images/oga/wyrmsun-cc-by-sa/goblin_spearman.png", 72, 72, 72/2, 72/2 + 5)
+  g_images.grass = love.graphics.newImage("resources/images/nu/checkered-grass.png")
+  g_images.castle = love.graphics.newImage("resources/images/pd/wyrmsun-cc0/town_hall.png")
+  g_images.goblin = new_sprite("resources/images/cl/wyrmsun-gpl/goblin_spearman.png", 72, 72, 72/2, 72/2 + 5)
+  g_images.turret = new_sprite("resources/images/pd/hv/Turret.png", 60, 60, 29, 33)
+  g_images.artillery = new_sprite("resources/images/pd/hv/Artillery.png", 80, 80, 40, 60)
+  g_images.turret_base = new_sprite("resources/images/pd/hv/Turret-base.png", 60, 40, 21, 15)
   g_images.blocks = {}
   for i, color in ipairs(k_block_colors) do
-    g_images.blocks[color] = love.graphics.newImage("resources/images/oga/kdd-blocks/" .. color .. ".png")
+    g_images.blocks[color] = love.graphics.newImage("resources/images/pd/kdd-blocks/" .. color .. ".png")
     g_images.blocks[i] = g_images.blocks[color]
   end
   love.graphics.setNewFont(12)
@@ -89,7 +100,7 @@ function love.draw()
     draw_background_layer()
     board_draw()
     static_draw_all()
-    draw_unit_sprite(g_images.goblin, "idle", 0, 1, 1, 4.5 * k_dim_x, 5.5 * k_dim_y, 2, 2)
+    unit_draw_all()
     draw_placement()
   end
   love.graphics.pop()
@@ -102,5 +113,12 @@ function love.update(dt)
   dy = ibool(key_pressed("down")) - ibool(key_pressed("up"))
   dr = ibool(key_pressed("s")) - ibool(key_pressed("a"))
   update_placement(dx, dy, dr)
-  camera_update()
+  g_state.spawn_timer = g_state.spawn_timer + dt / 5
+  while g_state.spawn_timer >= 1 do
+    g_state.spawn_timer = g_state.spawn_timer - 1
+    local sx, sy = board_perimeter_location(math.random(board_perimeter()))
+    unit_emplace(g_images.goblin, sx, sy)
+  end
+  unit_update_all(dt)
+  camera_update(dt)
 end

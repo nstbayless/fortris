@@ -1,0 +1,54 @@
+folder guide:
+
+---------------------------------------------------------------------
+-- Top Level --------------------------------------------------------
+
+[nu]
+  "No Usage"
+  Do not use these assets; they are not available without
+  further investigation or purchasing.
+
+[pd]
+  "Public Domain" (term is used liberally)
+  All rights waived or rights expired. (CC0 or "do what you will" hand waving)
+
+[cl]
+  "Copy-Left"
+  Share alike. gpl, cc-by-sa, etc.
+
+[nc]
+  "Non-Commercial"
+  Use non-commercially, but otherwise no restrictions (other than possibly credit).
+
+[c]
+  "Commercial"
+  Commercial usage available, and no restrictions (other than possibly credit).
+
+---------------------------------------------------------------------
+-- Packs and Images -------------------------------------------------
+
+[kdd-blocks]
+  opengameart, "use as you wish without crediting"
+
+[wyrmsun-cc0]
+  cc0 license
+  https://opengameart.org/content/wyrmsun-cc0-over-900-items
+
+[wyrmsun-cc-by-sa]
+  cc-by-sa license
+  https://opengameart.org/content/wyrmsun-cc-by-sagpl-over-300-items
+  https://github.com/Andrettin/Wyrmsun/blob/master/graphics/credits.txt
+
+[wyrmsun-gpl]
+  gpl license
+  https://opengameart.org/content/wyrmsun-cc-by-sagpl-over-300-items
+  https://github.com/Andrettin/Wyrmsun/blob/master/graphics/credits.txt
+
+[hv]
+  Hard Vacuum, a cancelled 90s RTS game
+  https://lostgarden.home.blog/2005/03/27/game-post-mortem-hard-vacuum/
+  "Use them, abuse them. If you make anything interesting, let me know."
+
+[checkered-grass]
+  non commercial. (Have to pay, no license attained yet...)
+  https://thumbs.dreamstime.com/z/green-grass-field-background-soccer-football-sports-lawn-pattern-texture-close-up-image-139976279.jpg

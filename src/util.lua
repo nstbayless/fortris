@@ -42,9 +42,53 @@ function rotate_2d_array_ccw(arr)
   return a
 end
 
+function ordered_range(a, b, dx)
+  dx = dx or 1
+  assert(dx ~= 0, "cannot order by 0")
+  a, b = math.floor(math.min(a, b)), math.floor(math.max(a, b))
+  local state = {}
+  if dx < 0 then
+    state = {
+      s = b,
+      e = a,
+      d = -1
+    }
+  else
+    state = {
+      s = a,
+      e = b,
+      d = 1
+    }
+  end
+  return function(state, v)
+    if v == "" then
+      return state.s
+    elseif v == state.e then
+      return nil
+    else
+      return v + state.d
+    end
+  end, state, ""
+end
+
+-- iterate over entries in table
+function entries(a)
+  assert(type(a) == "table")
+  return function(state)
+    while true do
+      state.idx = next(state.a, state.idx)
+      if state.idx == nil then
+        return nil
+      elseif state.a[state.idx] ~= nil then
+        return state.a[state.idx]
+      end
+    end
+  end, {a = a, idx=nil}, 0
+end
+
 -- iterate over 2d array
 -- for y, x, v in array_2d_iterate(a) do ... end
-function array_2d_iterate(a)
+function array_2d_iterate(a, base_idx)
   assert(a ~= nil)
   return function(state)
     local a = state.a
@@ -59,8 +103,8 @@ function array_2d_iterate(a)
       state.x = 1
       state.y = state.y + 1
     end
-    return y, x, v
-  end, {a=a, x=1, y=1}, 0
+    return y - state.offset, x - state.offset, v
+  end, {a=a, x=1, y=1, offset = -(base_idx or 1) + 1}, 0
 end
 
 -- ternary if
@@ -167,3 +211,47 @@ end
 function in_range(y, a, b)
   return y >= a and y < b
 end
+
+-- returns s shrunk toward t by a
+function shrink_toward(s, t, a)
+  if math.abs(t - s) < a then
+    return t
+  else
+    return s + tern(s < t, a, -a)
+  end
+end
+
+function sign(x)
+  return math.max(math.min(x * 1e200 * 1e200, 1), -1)
+end
+
+-- returns a version of the path where dx,dy between nodes is no greater than 1.
+function densify_path(path)
+  if not path then
+    return nil
+  end
+  local a = {}
+  local first = true
+  for _, node in ipairs(path) do
+    if first then
+      table.insert(a, {x = node.x, y = node.y})
+    else
+      while a[#a].x ~= node.x or a[#a].y ~= node.y do
+        assert(a[#a].x and a[#a].y and node.x and node.y)
+        local nextx = a[#a].x + sign(node.x - a[#a].x)
+        local nexty = a[#a].y + sign(node.y - a[#a].y)
+        assert(nextx and nexty)
+        table.insert(
+          a, {
+            x = nextx,
+            y = nexty
+          }
+        )
+      end
+    end
+    first = false
+  end
+  return a
+end
+
+math.tau = math.pi * 2

@@ -13,7 +13,7 @@ function board_init()
     bottom = 0;
     grid = {},
     force_pathable = {}, -- list of {{x, y, pathable}...}; allow/forbid pathfinding through these tiles even if they are nonpathable.
-    path_dirty = false
+    path_dirty = true
   }
 
   board_update_bounds(0, 32, 0, 16)
@@ -84,10 +84,44 @@ function board_iterate(board)
   end, {board=board, x=board.left, y=board.top}, 0
 end
 
+function board_width()
+  return g_state.board.right - g_state.board.left
+end
+
+function board_height()
+  return g_state.board.bottom - g_state.board.top
+end
+
+function board_perimeter()
+  return 2 * board_width() + 2 * board_height() - 4
+end
+
+-- returns x, y location of perimeter location
+function board_perimeter_location(i)
+  i = i % board_perimeter()
+  if i < board_width() then
+    return i, 0
+  end
+  i = i - board_width()
+  if i < board_height() - 2  then
+    return board_width() - 1, i + 1
+  end
+  i = i - board_height() + 2
+  if i < board_width()  then
+    return board_width() - i - 1, board_height() - 1
+  end
+  i = i - board_width()
+  if i < board_height() - 2 then
+    return 0, board_height() - 1 - i
+  end
+  -- paranoia
+  return 0, 0
+end
+
 -- draws terrain features / walls
 function board_draw()
   for y, x, v in board_iterate(g_state.board) do
-    if v ~= 0 and bit.band(v, bit.bnot(K_WALL_MASK)) == 0 then
+    if v ~= 0 and bit.band(v, K_WALL_MASK) ~= 0 then
       local image = g_images.blocks[bit.band(v, K_WALL_MASK)]
       local w = image:getWidth()
       local h = image:getHeight()
@@ -107,19 +141,24 @@ end
 -- wmask: if not nil, then overwrite only these bits (rather than mask).
 -- value: if not nil, then write this value instead of whatever is in the grid. Must be a subset of wmask. (Allows grid to be simple 0/1)
 -- bounds: if set, then treat regions outside of the board as though they have this value. (default: cannot place outside board)
+-- all: if set, only fail if all possible locations collide.
 -- test: (private use) only compare, do not write.
 function board_emplace(opts, test)
   local base_x = opts.x
   local base_y = opts.y
   local grid = opts.grid
+  local all = not not opts.all
+  local any_free = false
   local cmask = d(opts.cmask, opts.mask, 0xffffffff) -- "compare mask"
   local wmask = tern(test, 0, d(opts.wmask, opts.mask)) -- "write mask"
   assert(wmask ~= nil, "wmask not set.")
   local value = opts.value
+  assert(test or value ~= nil, "value must be supplied")
   local bounds = opts.bounds
   if value ~= nil and not test then
     assert(bit.band(value, bit.bnot(wmask)) == 0, "wmask (" .. HEX(wmask) .. ") must be a superset of value (" .. HEX(value) .. ")")
   end
+  local change_occurred = false
   grid = grid or {{1}}
   bounds = d(bounds, cmask)
   local board = g_state.board
@@ -127,45 +166,67 @@ function board_emplace(opts, test)
   -- first pass is the "test" run. Check for collisions. (skip if opts.force)
   -- second pass is the "emplace" run. Write values. (skip if test)
   for pass = tern(opts.force ~= nil, 1, 0),tern(test == true, 0, 1) do
-    for yo, row in ipairs(grid) do
-      for xo, grid_value in ipairs(row) do
-        local x = xo + base_x - 1
-        local y = yo + base_y - 1
-        local board_value = bounds
-        on_board = false
-        if x >= board.left and x < board.right and y >= board.top and y < board.bottom then
-          on_board = true
-          board_value = board.grid[y][x]
-        end
+    for yo, xo, grid_value in array_2d_iterate(grid, 0) do
+      local x = xo + base_x
+      local y = yo + base_y
+      local board_value = bounds
+      on_board = false
+      if x >= board.left and x < board.right and y >= board.top and y < board.bottom then
+        on_board = true
+        board_value = board.grid[y][x]
+      end
 
-        local obstruction = bit.band(board_value, cmask) ~= 0 and grid_value ~= 0
+      local obstruction = bit.band(board_value, cmask) ~= 0 and grid_value ~= 0
 
-        if pass == 0 then
-          -- first pass: check for collisions
-          if obstruction then
+      if pass == 0 then
+        -- first pass: check for collisions
+        if obstruction then
+          if not all then
             return false
           end
-        elseif grid_value ~= 0 and on_board then
-          -- second pass: write values
-          local write_value = tern(value == nil, grid_value, value)
-          if value == nil then
-            assert(bit.band(value, bit.bnot(wmask)) == 0, "mask (" .. HEX(wmask) .. ") must be a superset of grid value (" .. HEX(write_value) .. ") -- note that 'value' arg is nil.")
-          end
-          if bit.band(write_value, K_OBSTRUCTION) then
-            -- have to update pathfinder.
-            board.path_dirty = true
-          end
-          board.grid[y][x] = bit.bor(bit.band(board.grid[y][x], bit.bnot(wmask)), write_value)
+        else
+          any_free = true
+        end
+      elseif grid_value ~= 0 and on_board then
+        -- second pass: write values
+        if bit.band(value, K_OBSTRUCTION) then
+          -- have to update pathfinder.
+          board.path_dirty = true
+        end
+        local prev = board.grid[y][x]
+        board.grid[y][x] = bit.bor(bit.band(board.grid[y][x], bit.bnot(wmask)), value)
+        if prev ~= board.grid[y][x] then
+          change_occurred = true
         end
       end
+    end -- iterate board
+    if all and pass == 0 and not any_free then
+      -- fail.
+      return false
+    end
+  end -- iterate pass
+
+  -- notify board observers of update
+  if change_occurred then
+    for observer in entries(g_board_observers) do
+      observer({
+        x= base_x, y = base_y, grid = grid, mask = wmask, value = value
+      })
     end
   end
 
+  -- success.
   return true
 end
 
-function board_test(opts)
+-- checks if region would be free
+function board_test_free(opts)
   return board_emplace(opts, true)
+end
+
+-- checks if region would be obstructed
+function board_test_collides(opts)
+  return not board_test_free(opts)
 end
 
 function board_push_temporary_pathable_from_grid(x, y, grid, impathable)
@@ -218,11 +279,25 @@ function board_refresh_pathing()
   pf_update_from_grid()
 end
 
+g_board_observers = {}
+
+function board_observe(fn)
+  table.insert(g_board_observers, fn)
+end
+
 function board_pathfind(x, y, px, py)
   local board = g_state.board
   if board.path_dirty then
     board_refresh_pathing()
   end
 
-  return pf_pathfind(x - board.left + 1, y - board.top + 1, px - board.left + 1, py - board.top + 1)
+  local path, length = pf_pathfind(x - board.left + 1, y - board.top + 1, px - board.left + 1, py - board.top + 1)
+  -- convert path coordinates
+  if path ~= nil then
+    for idx, node in ipairs(path) do
+      node.x = node.x + board.left - 1
+      node.y = node.y + board.top - 1
+    end
+  end
+  return path, length
 end
