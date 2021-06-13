@@ -7,19 +7,29 @@ function static_init()
   }
 end
 
+function static_update_all(dt)
+  for id, static in pairs(g_state.statics) do
+    if static.fn_update then
+      static.fn_update(dt, id, static)
+    end
+  end
+end
+
 function static_draw(static)
   if static.image then
     draw_image_on_grid(static.image, static.x, static.y, static.w, static.h)
-  elseif static.sprite_data then
-    for idx, sprite_data in ipairs(static.sprite_data) do
+  elseif static.sprites then
+    for idx, sprite_data in ipairs(static.sprites) do
       local data = sprite_data
-      draw_sprite(
-        data.sprite, data.sprite_subimage,
-        static.x * k_dim_x + data.sprite_offx,
-        static.y * k_dim_y + data.sprite_offy,
-        0,
-        data.sprite_sx, data.sprite_sy
-      )
+      if data.sprite then -- guard against nil sprites
+        draw_sprite(
+          data.sprite, data.sprite_subimage,
+          static.x * k_dim_x + data.sprite_offx,
+          static.y * k_dim_y + data.sprite_offy,
+          0,
+          data.sprite_sx, data.sprite_sy
+        )
+      end
     end
   elseif static.rectangle then
     local r = static.rectangle
@@ -59,17 +69,19 @@ function static_emplace(opt)
     grid=grid,
     value=opt.collision_flags or K_STATIC_ALL,
     cmask=K_STATIC,
-    wmask=K_STATIC_ALL
+    wmask=K_STATIC_ALL,
   })
   assert(success, "failed to emplace static -- did you check static_test_emplace first?")
 
-  local static =  {
+  local static = {
     x = opt.x,
     y = opt.y,
     w = opt.w,
     h = opt.h,
     grid = grid,
     collision_flags = opt.collision_flags or K_STATIC_ALL,
+    props = opt.props or {}, -- user-defined properties
+    fn_update = opt.fn_update or nil,
     id = g_next_static_id
   }
 
@@ -78,7 +90,7 @@ function static_emplace(opt)
   if opt.image then
     static.image = opt.image
   elseif opt.sprites then
-    static.sprite_data = {}
+    static.sprites = {}
     for idx, s in ipairs(opt.sprites) do
       local data = {}
       assert(s)
@@ -88,7 +100,7 @@ function static_emplace(opt)
       data.sprite_sx = s.scale_x or 1
       data.sprite_sy = s.scale_y or 1
       data.sprite_subimage = s.sprite_image or 0
-      table.insert(static.sprite_data, data)
+      table.insert(static.sprites, data)
     end
   else
     static.rectangle = {

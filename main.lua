@@ -11,6 +11,7 @@ g_state = {
 g_images = {}
 
 require("src.util")
+require("src.misc")
 require("src.input")
 require("src.pathfinding")
 require("src.board")
@@ -46,7 +47,7 @@ function love.load()
   g_images.grass = love.graphics.newImage("resources/images/nu/checkered-grass.png")
   g_images.castle = love.graphics.newImage("resources/images/pd/wyrmsun-cc0/town_hall.png")
   g_images.goblin = new_sprite("resources/images/cl/wyrmsun-gpl/goblin_spearman.png", 72, 72, 72/2, 72/2 + 5)
-  g_images.turret = new_sprite("resources/images/pd/hv/Turret.png", 60, 60, 29, 33)
+  g_images.turret = new_sprite("resources/images/pd/hv/Turret.png", 60, 60, 29, 35)
   g_images.artillery = new_sprite("resources/images/pd/hv/Artillery.png", 80, 80, 40, 60)
   g_images.turret_base = new_sprite("resources/images/pd/hv/Turret-base.png", 60, 40, 21, 15)
   g_images.blocks = {}
@@ -119,6 +120,7 @@ function love.update(dt)
     local sx, sy = board_perimeter_location(math.random(board_perimeter()))
     unit_emplace(g_images.goblin, sx, sy)
   end
+  static_update_all(dt)
   unit_update_all(dt)
   camera_update(dt)
 end

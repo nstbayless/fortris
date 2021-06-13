@@ -50,6 +50,10 @@ function unit_emplace(sprite, x, y)
     x = x,
     y = y,
 
+    -- stats
+    health = 4,
+    healthmax = 4,
+
     -- movement rate (tiles per second)
     move_speed = 1,
 
@@ -62,7 +66,10 @@ function unit_emplace(sprite, x, y)
 
     -- animation
     state = "idle",
-    animation_speed = 5.5,
+    animation_speed = 5.5, -- temp/arbitrary
+    healthbar_offy = -25, -- temp/arbitrary
+    healthbar_height = 9,
+    healthbar_width = 30, -- temp/arbitrary
 
     -- sprite
     sprite = sprite
@@ -71,6 +78,11 @@ function unit_emplace(sprite, x, y)
   -- determine first path
   unit_repath(id)
   return id
+end
+
+-- iterates: id, unit
+function unit_iterate()
+  return pairs(g_state.units)
 end
 
 function unit_get(id)
@@ -102,6 +114,17 @@ function unit_process_removals()
   g_state.remove_units = {}
 end
 
+function unit_apply_damage(id, amount)
+  local unit = unit_get(id)
+  if unit then
+    unit.health = unit.health - amount
+    if unit.health <= 0 then
+      unit.health = 0
+      unit_remove(id)
+    end
+  end
+end
+
 function unit_remove(id)
   table.insert(g_state.remove_units, id)
 end
@@ -112,12 +135,6 @@ function unit_update_all(dt)
     unit_update(id, dt)
   end
   unit_process_removals()
-end
-
-function unit_draw_all()
-  for id, unit in pairs(g_state.units) do
-    unit_draw(id)
-  end
 end
 
 function unit_update(id, dt)
@@ -183,6 +200,37 @@ function unit_update(id, dt)
   end
 end
 
+-- returns distance from (grid) x, y location to unit.
+function unit_distance_to(x, y, id)
+  local unit = unit_get(id)
+  if unit then
+    -- TODO: factor in unit's offset.
+    return point_distance(x, y, unit.x + 0.5, unit.y + 0.5)
+  end
+end
+
+-- returns closest unit (and its distance) to given location
+function unit_closest(x, y, min, max)
+  min = min or 0
+  local best = nil
+  local best_id = nil
+  for id, unit in unit_iterate() do
+    local dist = unit_distance_to(x, y, id)
+    if ((not best) or dist < best) and dist >= min and ((not max) or dist <= max) then
+      best = dist
+      best_id = id
+    end
+  end
+
+  return best_id, best
+end
+
+function unit_draw_all()
+  for id, unit in pairs(g_state.units) do
+    unit_draw(id)
+  end
+end
+
 function unit_draw(id)
   local unit = g_state.units[id]
   if not unit then
@@ -192,11 +240,19 @@ function unit_draw(id)
   local ux = unit.dx / math.sqrt(unit.dx * unit.dx + unit.dy * unit.dy)
   local uy = unit.dy / math.sqrt(unit.dx * unit.dx + unit.dy * unit.dy)
   --love.graphics.circle("line", (unit.x + 0.5) * k_dim_x, (unit.y + 0.5) * k_dim_y, k_dim_x / 2)
+  local px = (unit.x + 0.5 + ux * unit.move_distance) * k_dim_x
+  local py = (unit.y + 0.5 + uy * unit.move_distance) * k_dim_y
   draw_unit_sprite(unit.sprite, unit.state, ux, uy, g_state.time * unit.animation_speed,
-    (unit.x + 0.5 + ux * unit.move_distance) * k_dim_x,
-    (unit.y + 0.5 + uy * unit.move_distance) * k_dim_y,
+    px,
+    py,
     2, 2
   )
+
+  -- health bar
+  -- (checking health > 0 is paranoia)
+  if unit.health < unit.healthmax and unit.health > 0 then
+    draw_healthbar(px, py + unit.healthbar_offy, unit.healthbar_width, unit.healthbar_height, unit.health, unit.healthmax)
+  end
 end
 
 -- dx, dy indicate facing.
@@ -215,34 +271,12 @@ function draw_unit_sprite(sprite, animation_name, dx, dy, timer, x, y, sx, sy)
     dy = dy * -1
   end
 
-  animation_angle_offset = 2
+  animation_angle_offset = d(get_rotation_offset_for_animation(8, dx, dy), 2)
   animation_sx = 1
-  if dx ~= 0 or dy ~= 0 then
-    local angle = math.atan2(dy, dx) / math.tau
-    if angle < 0 then
-      angle = angle + 1
-    end
-    if in_range(angle, 11/16, 13/16) then
-      animation_angle_offset = 0
-    elseif in_range(angle, 13/16, 15/16) then
-      animation_angle_offset = 1
-    elseif angle >= 15/16 or angle < 1/16 then
-      animation_angle_offset = 2
-    elseif in_range(angle, 1/16, 3/16) then
-      animation_angle_offset = 3
-    elseif in_range(angle, 3/16, 5/16) then
-      animation_angle_offset = 4
-    elseif in_range(angle, 5/16, 7/16) then
-      animation_angle_offset = 3
-      animation_sx = -1
-    elseif in_range(angle, 7/16, 9/16) then
-      animation_angle_offset = 2
-      animation_sx = -1
-    elseif in_range(angle, 9/16, 11/16) then
-      animation_angle_offset = 1
-      animation_sx = -1
-    end
+  if animation_angle_offset >= 5 then
+    animation_angle_offset = 8 - animation_angle_offset
+    animation_sx = -1
   end
-
+  
   draw_sprite(sprite, animation_base + animation_angle_offset, x, y, 0, (sx or 1) * animation_sx, sy or 1)
 end

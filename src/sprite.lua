@@ -3,6 +3,8 @@ function new_sprite(image, width, height, offx, offy)
     image = love.graphics.newImage(image)
   end
   local animation = {}
+  animation.height = height
+  animation.width = width
   animation.spriteSheet = image;
   animation.quads = {};
 

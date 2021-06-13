@@ -80,25 +80,110 @@ function turret_get_potential_at(x, y, size, dx, dy, used)
   return nil
 end
 
+-- updates a turret static.
+function turret_update(dt, id, turret)
+  -- centre of turret
+  local cx = turret.x + turret.w / 2
+  local cy = turret.y + turret.h / 2
+  local props = turret.props
+
+  if props.target == nil or not in_range(d(unit_distance_to(cx, cy, props.target), 0), props.min_range, props.max_range) then
+    -- select new target
+    props.target = unit_closest(cx, cy, props.min_range, props.max_range)
+    if not in_range(d(unit_distance_to(cx, cy, props.target), 0), props.min_range, props.max_range) then
+      props.target = nil
+    end
+  end
+
+  -- shoot, if there is a target.
+  local do_shoot = false
+  props.firing_timer = props.firing_timer + dt
+  if props.firing_timer >= props.firing_interval then
+    if props.target then
+      props.firing_timer = props.firing_timer - props.firing_interval
+      do_shoot = true
+    else
+      props.firing_timer = props.firing_interval
+    end
+  end
+
+  local target = unit_get(props.target)
+
+  -- face target
+  if target then
+    local offset = get_rotation_offset_for_animation(8, target.x + 0.5 - cx, target.y + 0.5 - cy)
+    if offset then
+      turret.sprites[2].sprite_subimage = offset
+    end
+  end
+
+  -- shooting animation
+  if props.firing_timer < 0.15  then
+    turret.sprites[2].sprite_subimage = (turret.sprites[2].sprite_subimage % 8) + 8
+  else
+    turret.sprites[2].sprite_subimage = turret.sprites[2].sprite_subimage % 8
+  end
+
+  -- damage target
+  if do_shoot then
+    unit_apply_damage(props.target, props.damage)
+  end
+end
+
 function turret_emplace_potentials_at_grid(x, y, grid, dx, dy)
   local potentials = turret_get_potentials_at_grid(x, y, grid, dx, dy)
   for potential in entries(potentials) do
     assert(potential.x and potential.y and potential.size)
-    local sprite = g_images.turret_base
+    local sprites = {{sprite = g_images.turret_base}, {sprite = g_images.turret}}
+    local props = {
+      target = nil,
+      min_range = 1,
+      max_range = 5,
+      damage = 0.25,
+      firing_interval = 0.5,
+      firing_timer = 0.12,
+    }
+
     if potential.size == 3 then
-      sprite = g_images.artillery
+      sprites = {{sprite = nil}, {sprite = g_images.artillery}}
+      props = {
+        target = nil,
+        min_range = 5,
+        max_range = 12,
+        damage = 4,
+        firing_interval = 10 / 3,
+        firing_timer = 2.1,
+      }
     end
+
+    if potential.size == 4 then
+      -- TODO: a bigger sprite.
+      sprites = {{sprite = nil}, {sprite = g_images.artillery}}
+      props = {
+        target = nil,
+        min_range = 5,
+        max_range = 12,
+        damage = 20,
+        firing_interval = 4.5,
+        firing_timer = -2,
+      }
+    end
+
+    -- apply sprite offset
+    for sprite in entries(sprites) do
+      sprite.sprite_offx = k_dim_x * potential.size / 2
+      sprite.sprite_offy = k_dim_y * potential.size / 2
+    end
+
     static_emplace({
       x = potential.x,
       y = potential.y,
       w = potential.size,
       h = potential.size,
       collision_flags = K_STATIC,
-      sprites = {{
-        sprite = sprite,
-        sprite_offx = k_dim_x * potential.size / 2,
-        sprite_offy = k_dim_y * potential.size / 2,
-      }}
+      sprites = sprites,
+      fn_update = turret_update,
+      props = props
     })
   end
 end
