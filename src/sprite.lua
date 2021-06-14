@@ -26,7 +26,10 @@ function draw_sprite(animation, t, x, y, r, sx, sy)
   if animation == nil then
     return
   end
-  local spriteNum = (math.floor(t) % #animation.quads) + 1
+  if t >= #animation.quads then
+    return
+  end
+  local spriteNum = (math.floor(t)) + 1
   sx = sx or 1
   sy = sy or 1
   r = r or 0

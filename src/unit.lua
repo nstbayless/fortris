@@ -40,7 +40,7 @@ function unit_on_board_update(det)
   end
 end
 
-function unit_emplace(sprite, x, y)
+function unit_emplace(sprite, x, y, opts)
   local id = g_unit_id
   g_unit_id = g_unit_id + 1
   g_state.units[id] = {
@@ -51,12 +51,14 @@ function unit_emplace(sprite, x, y)
     y = y,
 
     -- stats
-    health = 4,
-    healthmax = 4,
-    bounty = 2,
+    health = opts.hp or opts.health or opts.hpmax or opts.healthmax or 4,
+    healthmax = opts.hpmax or opts.healthmax or opts.hp or opts.health or 4,
+    bounty = opts.bounty or 2,
 
     -- movement rate (tiles per second)
     move_speed = 1,
+    move_speed_concealed = 10, -- speed when in fog of war
+    concealed = nil,
 
     -- tile distance moved (in dx, dy)
     move_distance = 0,
@@ -140,7 +142,7 @@ function unit_apply_damage(id, amount, effect)
     if unit.health <= 0 then
       -- death
       unit.health = 0
-      g_state.svy.money = g_state.svy.money + unit.bounty
+      svy_gain_bounty(unit.bounty)
       unit_remove(id)
     end
   end
@@ -175,11 +177,23 @@ function unit_update(id, dt)
   -- while loop accounts for possibility of such extreme
     -- lag that multiple tiles are advanced right now.
   local retry = true
+  if unit.concealed == nil then
+    unit.concealed = true
+    for x = -1,1 do
+      for y = -1,1 do
+        if not board_test_collides({x = unit.x + x, y = unit.y + y, grid = {{1}}, mask = K_FOG_OF_WAR}) then
+          unit.concealed = false
+          break
+        end
+      end
+    end
+  end
+  local speed = tern(unit.concealed, unit.move_speed_concealed, unit.move_speed)
   while retry do
     retry = false
     if not unit.path then
       if unit.move_distance ~= 0 then
-        unit.move_distance = shrink_toward(unit.move_distance, 0, unit.move_speed * dt)
+        unit.move_distance = shrink_toward(unit.move_distance, 0, speed * dt)
         unit.state = tern(unit.move_distance < 0, "walk", "walk-reverse")
       else
         unit.state = "idle"
@@ -190,13 +204,14 @@ function unit_update(id, dt)
       local dx = node.x - unit.x
       local dy = node.y - unit.y
       local goal_move_distance = math.sqrt(dx * dx + dy * dy) / 2
-      unit.move_distance = unit.move_distance + unit.move_speed * dt
+      unit.move_distance = unit.move_distance + speed * dt
       dt = 0
       if unit.move_distance >= 0 and (dx ~= 0 or dy ~= 0) then
         unit.dx = dx
         unit.dy = dy
       end
       if unit.move_distance >= goal_move_distance then
+        unit.concealed = nil
         unit.move_distance = unit.move_distance - goal_move_distance * 2
         -- advance to next node
         unit.x = node.x
@@ -289,7 +304,7 @@ function unit_draw(id)
   draw_unit_sprite(unit.sprite, unit.state, ux, uy, g_state.time * unit.animation_speed,
     px,
     py,
-    2, 2
+    1.5, 1.5
   )
 
   -- health bar

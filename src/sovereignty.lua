@@ -1,11 +1,12 @@
 function svy_init()
   -- add castle.
   local castle_id = static_emplace({
-    x = 12,
-    y = 8,
+    x = 14,
+    y = 12,
     w = 2,
     h = 2,
     image = g_images.castle,
+    fog_clear_radius = 4,
   })
 
   -- initialize sovereignty
@@ -13,9 +14,19 @@ function svy_init()
     color = "purple",
     building_idxs = {castle_id},
     protectee_idxs = {castle_id},
-    money = 70,
+    money = 36,
     hp = 20,
   }
+end
+
+function svy_gain_bounty(amount)
+  if amount > 0 then
+    g_state.svy.money = g_state.svy.money + amount
+
+    -- TODO -- make this by observer.
+    -- (placement cache depends on whether or not there are enough funds for the blocks)
+    g_state.placement_cache.dirty = true
+  end
 end
 
 -- for now, goal is just the first castle.

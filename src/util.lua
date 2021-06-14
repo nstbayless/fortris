@@ -308,3 +308,8 @@ function iota(x)
   end
   return a
 end
+
+-- swaps indices i1, i2 of the array
+function table.swap(a, i1, i2)
+  a[i1], a[i2] = a[i2], a[i1]
+end

@@ -2,8 +2,10 @@ K_WALL_MASK = 0xff
 K_WALL_MASK_OBSTRUCTION = 0x7f
 K_STATIC = 0x100
 K_STATIC_OBSTRUCTION = 0x200
+K_FOG_OF_WAR = 0x400
 K_STATIC_ALL = bit.bor(K_STATIC, K_STATIC_OBSTRUCTION)
 K_OBSTRUCTION = bit.bor(K_WALL_MASK_OBSTRUCTION, K_STATIC_OBSTRUCTION)
+K_NO_SHADOWS = 0
 
 function board_init()
   g_state.board = {
@@ -16,7 +18,12 @@ function board_init()
     path_dirty = true
   }
 
-  board_update_bounds(0, 32, 0, 16)
+  board_update_bounds(0, 40, 0, 24)
+end
+
+-- new tile added to board
+function board_generate_tile(x, y)
+  return K_FOG_OF_WAR
 end
 
 -- sets new bounds for the board, adding or removing tiles as needed.
@@ -41,7 +48,7 @@ function board_update_bounds(left, right, top, bottom)
         -- add row
         board.grid[y] = {}
         for x = left,right - 1 do
-          board.grid[y][x] = 0
+          board.grid[y][x] = board_generate_tile(x, y)
         end
       else
         for x = math.min(left,pleft),math.max(right, pright) - 1 do
@@ -118,28 +125,133 @@ function board_perimeter_location(i)
   return 0, 0
 end
 
--- draws terrain features / walls
-function board_draw()
-  for y, x, v in board_iterate(g_state.board) do
-    if v ~= 0 and bit.band(v, K_WALL_MASK) ~= 0 then
-      local image = g_images.blocks[bit.band(v, K_WALL_MASK)]
-      local w = image:getWidth()
-      local h = image:getHeight()
-      local sx = k_dim_x / w
-      local sy = k_dim_y / h
-      love.graphics.draw(image, x * k_dim_x, y * k_dim_y, 0, sx, sy)
+-- wall image indices
+K_WALL_INNER_CORNER = {
+  {17, 16}, {13, 12}
+}
+
+K_WALL_OUTER_CORNER = {
+  {0, 2}, {8, 10}
+}
+
+K_WALL_HORIZONTAL = {
+  1, 9
+}
+
+K_WALL_VERTICAL = {
+  4, 6
+}
+
+K_SHADOW = {
+  nil, 20, 21, 26,
+  23, 24, 22, 25,
+}
+
+-- returns one of four corner tiles for the wall at the given idx
+function wall_get_subtile(base_x, base_y, dx, dy, mask, edges_are_walls)
+  assert(dx and dy and dx ~= 0 and dy ~= 0)
+  local wall_at = {}
+  
+  -- check 2x2 square to see what walls are there.
+  for y in ordered_range(base_y, base_y + dy) do
+    wall_at[y] = {}
+    for x in ordered_range(base_x, base_x + dx) do
+      wall_at[y][x] = bit.band(d(board_get_value(x, y, edges_are_walls and mask or 0), 0), mask) ~= 0
+    end
+  end
+
+  -- indices for selecting subimages from lists
+  local imgx = tern(dx > 0, 2, 1)
+  local imgy = tern(dy > 0, 2, 1)
+
+  -- if base position has no wall, then there is no wall.
+  if not wall_at[base_y][base_x] then
+    if dx == 1 and dy == 1 then
+      -- bottom-right corner never has shadows.
+      return nil
+    end
+    -- no wall, but possibly shadows
+    local left = dx == -1 and wall_at[base_y][base_x + dx]
+    local top = dy == -1 and wall_at[base_y + dy][base_x]
+    local diagonal = (dx == -1 and dy == -1 and wall_at[base_y + dy][base_x + dx]) or (dx == 1 and dy == -1 and top) or (dy == 1 and dx == -1 and left)
+
+    return K_SHADOW[tern(left, 1, 0) + tern(top, 2, 0) + tern(diagonal, 4, 0) + 1]
+  else
+    -- full region or inner corner
+    if wall_at[base_y + dy][base_x] and wall_at[base_y][base_x + dx] then
+      if wall_at[base_y + dy][base_x + dx] then
+        -- full
+        return 5
+      else
+        return K_WALL_INNER_CORNER[imgy][imgx]
+      end
+    end
+
+    -- horizontal wall
+    if wall_at[base_y][base_x + dx] and not wall_at[base_y + dy][base_x] then
+      return K_WALL_HORIZONTAL[imgy]
+    end
+
+    -- vertical  wall
+    if wall_at[base_y + dy][base_x] and not wall_at[base_y][base_x + dx] then
+      return K_WALL_VERTICAL[imgx]
+    end
+
+    -- outer corner
+    if not wall_at[base_y + dy][base_x] and not wall_at[base_y][base_x + dx] then
+      return K_WALL_OUTER_CORNER[imgy][imgx]
     end
   end
 end
 
-function board_get_value(x, y)
+function wall_draw_at(x, y, sprite, mask, edges_are_walls)
+  for dy = -1,1,2 do
+    for dx = -1,1,2 do
+      local wall_subtile = wall_get_subtile(x, y, dx, dy, mask or K_WALL_MASK, edges_are_walls or false)
+      if wall_subtile then
+        draw_sprite(sprite or g_images.wall, wall_subtile,
+          (x + 0.25 + 0.25 * dx) * k_dim_x,
+          (y + 0.25 + 0.25 * dy) * k_dim_y
+        )
+      end
+    end
+  end
+end
+
+-- draws terrain features / walls
+function board_draw()
+  for y, x, v in board_iterate(g_state.board) do
+    if bit.band(v, K_WALL_MASK) ~= 0 or bit.band(v, K_NO_SHADOWS) == 0 then
+      wall_draw_at(x, y, g_images.wall)
+    end
+  end
+end
+
+function board_draw_fog()
+  for y, x, v in board_iterate(g_state.board) do
+    if bit.band(v, K_FOG_OF_WAR) ~= 0 then
+      wall_draw_at(x, y, g_images.fog_of_war, K_FOG_OF_WAR, true)
+    end
+  end
+
+  -- draw borders
+  local m = 1000
+  love.graphics.setColor(0, 0, 0)
+  love.graphics.rectangle("fill", -m, -m, m * 2 + board_width() * k_dim_x, m)
+  love.graphics.rectangle("fill", -m, 0, m, board_height() * k_dim_y)
+  love.graphics.rectangle("fill", board_width() * k_dim_x, 0, m, board_height() * k_dim_y)
+  love.graphics.rectangle("fill", -m, board_height() * k_dim_y, m * 2 + board_width() * k_dim_x, m)
+  love.graphics.setColor(1, 1, 1)
+end
+
+function board_get_value(x, y, default)
   local board = g_state.board
   if not board.grid[y] then
-    return nil
+    return default
   end
   local v = board.grid[y][x]
   if v == nil then
-    return nil
+    return default
   end
 
   -- check temporary edits
@@ -157,7 +269,7 @@ end
 
 -- writes values to the board, if they don't collide with another value.
 -- returns true if successful, false if fails (a collision)
--- base_x, base_y: the top-left coordinate to write to the board at.
+-- x, y: the top-left coordinate to write to the board at.
 -- grid={{1}}: a 2d array of values. Every non-zero value will be written.
 -- mask: required if both cmask and wmask are not provided. cmask and wmask are set to this.
 -- cmask: if not nil, then only check and overwrite the masked bits of the board.
@@ -165,17 +277,18 @@ end
 -- value: if not nil, then write this value instead of whatever is in the grid. Must be a subset of wmask. (Allows grid to be simple 0/1)
 -- bounds: if set, then treat regions outside of the board as though they have this value. (default: cannot place outside board)
 -- all: if set, only fail if all possible locations collide.
+-- force: apply without checking
 -- test: (private use) only compare, do not write.
 function board_emplace(opts, test)
   local base_x = opts.x
   local base_y = opts.y
-  local grid = opts.grid
+  local grid = opts.grid or make_2d_array(opts.w, opts.h, 1)
   local all = not not opts.all
   local any_free = false
   local cmask = d(opts.cmask, opts.mask, 0xffffffff) -- "compare mask"
   local wmask = tern(test, 0, d(opts.wmask, opts.mask)) -- "write mask"
   assert(wmask ~= nil, "wmask not set.")
-  local value = opts.value
+  local value = opts.value or opts.wmask
   assert(test or value ~= nil, "value must be supplied")
   local bounds = opts.bounds
   if value ~= nil and not test then
@@ -212,7 +325,7 @@ function board_emplace(opts, test)
           if not all then
             return false
           end
-        else
+        elseif grid_value ~= 0 then
           any_free = true
         end
       elseif grid_value ~= 0 and on_board then

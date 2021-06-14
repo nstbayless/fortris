@@ -5,11 +5,23 @@ function camera_init()
     x=0,
     y=0,
     w=w / k_dim_x,
-    h=h / k_dim_y
+    h=h / k_dim_y,
+    shake_x = 0,
+    shake_y = 0,
+    shake_timer = 0
   }
 end
 
-function camera_update()
+function camera_apply_shake(time, amountx, amounty)
+  local camera = g_state.camera
+
+  -- TODO: stackable shaking
+  camera.shake_timer = time
+  camera.shake_x = amountx or 1
+  camera.shake_y = amounty or amountx or 1
+end
+
+function camera_update(dt)
   local camera = g_state.camera
   local board = g_state.board
 
@@ -29,8 +41,19 @@ function camera_update()
   else
     camera.y = math.clamp(camera.y, board.top, board.bottom - camera.h)
   end
+
+  -- shake
+  if camera.shake_timer > 0 then
+    camera.shake_timer = camera.shake_timer - dt
+  end
 end
 
 function camera_apply_transform()
-  love.graphics.translate(-g_state.camera.x * k_dim_x, -g_state.camera.y * k_dim_y)
+  local offx, offy = 0, 0
+  local camera = g_state.camera
+  if camera.shake_timer > 0 then
+    offx = offx + math.frandom(-camera.shake_x, camera.shake_x)
+    offy = offy + math.frandom(-camera.shake_y, camera.shake_y)
+  end
+  love.graphics.translate(math.round(-camera.x * k_dim_x + offx), math.round(-camera.y * k_dim_y + offy))
 end

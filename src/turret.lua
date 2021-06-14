@@ -60,7 +60,7 @@ function turret_get_props_by_size(size)
       target = nil,
       min_range = 5,
       max_range = 12,
-      damage = 4,
+      damage = 2.25,
       firing_interval = 10 / 3,
       firing_timer = 2.1,
     }
@@ -73,7 +73,7 @@ function turret_get_props_by_size(size)
       target = nil,
       min_range = 5,
       max_range = 12,
-      damage = 20,
+      damage = 10,
       firing_interval = 4.5,
       firing_timer = -2,
     }

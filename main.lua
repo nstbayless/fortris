@@ -27,7 +27,8 @@ function init_state()
   g_state = {
     time = 0,
     spawn_rate = 1/5,
-    spawn_timer = 3
+    spawn_progress = 0.5,
+    spawn_timer = 0
   }
   pf_init()
   board_init()
@@ -40,11 +41,13 @@ function init_state()
 end
 
 function love.load()
-  math.randomseed(0)
-  for i = 1,10 do
+  math.randomseed(os.time())
+  -- gain some randomness by throwing out some random numbers.
+  for i = 1,100 + math.random(100) do
     math.random()
   end
 
+  love.window.setMode(1424, 968)
   love.graphics.setDefaultFilter("linear", "nearest")
   g_font = love.graphics.newFont(24, "normal", dpi())
   g_images.grass = love.graphics.newImage("resources/images/f/checkered-grass.png")
@@ -55,6 +58,8 @@ function love.load()
   g_images.turret_base = new_sprite("resources/images/pd/hv/Turret-base.png", 60, 40, 21, 15)
   g_images.blood = new_sprite("resources/images/pd/hv/blood.png", 20, 20, 10, 10)
   g_images.muzzle = new_sprite("resources/images/pd/hv/Muzzle.png", 20, 20, 10, 15)
+  g_images.wall = new_sprite("resources/images/pd/wyrmsun-cc0/goblin_wall.png", 16, 16)
+  g_images.fog_of_war = new_sprite("resources/images/f/fog_of_war.png", 16, 16)
   g_images.blocks = {}
   for i, color in ipairs(k_block_colors) do
     g_images.blocks[color] = love.graphics.newImage("resources/images/pd/kdd-blocks/" .. color .. ".png")
@@ -109,8 +114,9 @@ function love.draw()
     board_draw()
     static_draw_all()
     unit_draw_all()
-    draw_placement()
     effects_draw()
+    board_draw_fog()
+    draw_placement()
   end
   love.graphics.pop()
 
@@ -125,12 +131,20 @@ function love.update(dt)
   dy = ibool(key_pressed("down")) - ibool(key_pressed("up"))
   dr = ibool(key_pressed("s")) - ibool(key_pressed("a"))
   update_placement(dx, dy, dr)
-  g_state.spawn_rate = 1 / (5) + g_state.time / 500
-  g_state.spawn_timer = g_state.spawn_timer + dt * g_state.spawn_rate
-  while g_state.spawn_timer >= 1 do
-    g_state.spawn_timer = g_state.spawn_timer - 1
-    local sx, sy = board_perimeter_location(math.random(board_perimeter()))
-    unit_emplace(g_images.goblin, sx, sy)
+
+  -- spawning monsters
+  if g_state.placement_count >= 2 then
+    g_state.spawn_timer = g_state.spawn_timer + dt
+    g_state.spawn_rate = g_state.spawn_rate + dt / 500
+    g_state.spawn_progress = g_state.spawn_progress + dt * g_state.spawn_rate
+    while g_state.spawn_progress >= 1 do
+      g_state.spawn_progress = g_state.spawn_progress - 1
+      local sx, sy = board_perimeter_location(math.random(board_perimeter()))
+      unit_emplace(g_images.goblin, sx, sy, {
+        hp = tern(g_state.spawn_timer < 30, 1, 0.5 + g_state.spawn_timer / 30),
+        bounty = tern(g_state.spawn_rate > 1.2, 1, 2)
+      })
+    end
   end
   effects_update(dt)
   static_update_all(dt)

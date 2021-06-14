@@ -72,13 +72,14 @@ local K_PLACEMENTS = {
 function init_placement()
   g_state.placement_idx = nil
   g_state.placement_permutation = {}
+  g_state.placement_count = -1
   g_state.placement_cache = {
     dirty = true,
     placable = false,
     implacable_reason = 1,
     turret_potentials = {}
   }
-  next_placement()
+  next_placement(true)
 
   board_observe(
     function() 
@@ -128,6 +129,17 @@ function placement_placable()
     return false, 2
   end
 
+  -- check for being completely in fog of war
+  if board_test_collides({
+    x=g_state.placement.x,
+    y=g_state.placement.y,
+    grid=g_state.placement.grid,
+    mask=K_FOG_OF_WAR,
+    all=true
+  }) then
+    return false,  4
+  end
+
   -- check that path would not be interrupted by placing this.
   board_push_temporary_change_from_grid(placement.x, placement.y, placement.grid, K_OBSTRUCTION)
   local reachable = svy_goal_reachable()
@@ -135,11 +147,16 @@ function placement_placable()
   return reachable, tern(reachable, 0, 3)
 end
 
-function next_placement()
+function next_placement(is_first_placement)
   if g_state.placement_idx == nil or g_state.placement_idx >= #K_PLACEMENTS then
     g_state.placement_idx = 0
     g_state.placement_permutation = shuffle(iota(#K_PLACEMENTS))
+
+    -- first placement: guarantee that a square block is in the first three
+    -- (this ensures a turret will be placed)
+    table.swap(g_state.placement_permutation, math.random(3), indexof(g_state.placement_permutation, 2))
   end
+  g_state.placement_count = g_state.placement_count + 1
   local idx = g_state.placement_idx
   local base = K_PLACEMENTS[g_state.placement_permutation[idx + 1]]
   assert(base)
@@ -193,7 +210,7 @@ function draw_placement()
   if placement ~= nil and placement.type == "block" then
     local image = g_images.blocks[placement.color]
     if not cache.placable then
-      image = ({g_images.blocks.gray, g_images.blocks.red2, g_images.blocks.red})[cache.implacable_reason]
+      image = ({g_images.blocks.gray, g_images.blocks.red2, g_images.blocks.red, g_images.blocks.red})[cache.implacable_reason]
       love.graphics.setColor(1, 1, 1, 0.5)
     end
     for y, row in ipairs(g_state.placement.grid) do
@@ -245,6 +262,9 @@ function placement_emplace()
   g_state.svy.money = g_state.svy.money - K_PLACEMENT_COST
 
   turret_emplace_potentials_at_grid(placement.x, placement.y, placement.grid, placement.dx, placement.dy)
+
+  -- shake effect
+  camera_apply_shake(0.15, 1.6)
 
   next_placement()
 end

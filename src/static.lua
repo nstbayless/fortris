@@ -85,6 +85,19 @@ function static_emplace(opt)
     id = g_next_static_id
   }
 
+  -- clear fog of war
+  local fog_clear_radius = 3 or opt.fog_clear_radius
+
+  board_emplace({
+    x = static.x - fog_clear_radius,
+    w = static.w + fog_clear_radius * 2,
+    y = static.y - fog_clear_radius,
+    h = static.h + fog_clear_radius * 2,
+    force = true,
+    mask = K_FOG_OF_WAR,
+    value = 0
+  })
+
   -- how to render this static
 
   if opt.image then
