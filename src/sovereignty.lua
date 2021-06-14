@@ -15,7 +15,7 @@ function svy_init()
     building_idxs = {castle_id},
     protectee_idxs = {castle_id},
     money = 36,
-    hp = 3,
+    hp = 10,
   }
 end
 
