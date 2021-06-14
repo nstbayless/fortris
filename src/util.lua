@@ -291,3 +291,20 @@ function math.frandom(a, b)
 end
 
 math.tau = math.pi * 2
+
+function shuffle(a)
+  local shuffled = {}
+  for i, v in ipairs(a) do
+    local pos = math.random(1, #shuffled + 1)
+    table.insert(shuffled, pos, v)
+  end
+  return shuffled
+end
+
+function iota(x)
+  local a = {}
+  for i = 1,x do
+    a[i] = i
+  end
+  return a
+end

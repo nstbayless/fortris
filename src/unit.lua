@@ -53,6 +53,7 @@ function unit_emplace(sprite, x, y)
     -- stats
     health = 4,
     healthmax = 4,
+    bounty = 2,
 
     -- movement rate (tiles per second)
     move_speed = 1,
@@ -137,7 +138,9 @@ function unit_apply_damage(id, amount, effect)
       })
     end
     if unit.health <= 0 then
+      -- death
       unit.health = 0
+      g_state.svy.money = g_state.svy.money + unit.bounty
       unit_remove(id)
     end
   end
@@ -215,6 +218,9 @@ function unit_update(id, dt)
   -- remove unit if reaches destination
   if unit.move_distance == 0 and svy_position_is_at_goal(unit.x, unit.y) then
     unit_remove(unit.id)
+
+    -- damage sovereignty
+    g_state.svy.hp = g_state.svy.hp - 1
   end
 end
 

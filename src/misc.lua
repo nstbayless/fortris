@@ -68,3 +68,26 @@ function get_rotation_offset_for_animation(frames, dx, dy)
     end
   end
 end
+
+function draw_concentric_circles(x, y, r1, r2, interval, offset, fade)
+  local pr, pg, pb, pa = love.graphics.getColor()
+  for r = (r1 + (offset % interval)),r2,interval do
+    -- set alpha
+    local p = (r - r1) / (r2 - r1)
+    -- border fading
+    local p_border = math.clamp((p - p * p) * 28, 0, 1)
+
+    -- interior fading
+    local p_interior = 1 - math.clamp((p - p * p) * 5, 0, 0.8)
+
+    if fade then
+      love.graphics.setColor(pr, pg, pb, pa * p_border * p_interior)
+    end
+    love.graphics.circle("line", x, y, r)
+  end
+  love.graphics.setColor(pr, pg, pb, pa)
+end
+
+function dpi()
+  return love.graphics.getDPIScale()
+end

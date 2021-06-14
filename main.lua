@@ -6,8 +6,7 @@ k_dim_y = 32
 
 k_block_colors = {"blue", "darkgray", "gray", "green", "lightblue", "orange", "yellow", "pink", "purple", "red", "red2", "white"}
 
-g_state = {
-}
+g_state = {}
 g_images = {}
 
 require("src.util")
@@ -27,6 +26,7 @@ require("src.unit")
 function init_state()
   g_state = {
     time = 0,
+    spawn_rate = 1/5,
     spawn_timer = 3
   }
   pf_init()
@@ -46,7 +46,8 @@ function love.load()
   end
 
   love.graphics.setDefaultFilter("linear", "nearest")
-  g_images.grass = love.graphics.newImage("resources/images/nu/checkered-grass.png")
+  g_font = love.graphics.newFont(24, "normal", dpi())
+  g_images.grass = love.graphics.newImage("resources/images/f/checkered-grass.png")
   g_images.castle = love.graphics.newImage("resources/images/pd/wyrmsun-cc0/town_hall.png")
   g_images.goblin = new_sprite("resources/images/cl/wyrmsun-gpl/goblin_spearman.png", 72, 72, 72/2, 72/2 + 5)
   g_images.turret = new_sprite("resources/images/pd/hv/Turret.png", 60, 60, 29, 35)
@@ -69,8 +70,8 @@ function draw_background_layer()
   local h = g_images.grass:getHeight()
 
   -- number of squares in image
-  local rep_x = 4
-  local rep_y = 4
+  local rep_x = 8
+  local rep_y = 8
 
   local scale_x = k_dim_x / (w / rep_x)
   local scale_y = k_dim_y / (h / rep_y)
@@ -101,6 +102,8 @@ function love.draw()
   love.graphics.setBackgroundColor(0,0,0)
   love.graphics.push()
   camera_apply_transform()
+
+  -- draw these in world coordinates, (transformed by camera).
   do
     draw_background_layer()
     board_draw()
@@ -110,6 +113,9 @@ function love.draw()
     effects_draw()
   end
   love.graphics.pop()
+
+  -- not affected by camera
+  svy_draw_overlay()
 end
 
 function love.update(dt)
@@ -119,7 +125,8 @@ function love.update(dt)
   dy = ibool(key_pressed("down")) - ibool(key_pressed("up"))
   dr = ibool(key_pressed("s")) - ibool(key_pressed("a"))
   update_placement(dx, dy, dr)
-  g_state.spawn_timer = g_state.spawn_timer + dt / 5
+  g_state.spawn_rate = 1 / (5) + g_state.time / 500
+  g_state.spawn_timer = g_state.spawn_timer + dt * g_state.spawn_rate
   while g_state.spawn_timer >= 1 do
     g_state.spawn_timer = g_state.spawn_timer - 1
     local sx, sy = board_perimeter_location(math.random(board_perimeter()))

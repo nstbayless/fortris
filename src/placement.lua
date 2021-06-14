@@ -1,3 +1,5 @@
+K_PLACEMENT_COST = 10
+
 local K_PLACEMENTS = {
   -- T
   {
@@ -49,7 +51,7 @@ local K_PLACEMENTS = {
 
   -- Z
   {
-    color = "red",
+    color = "pink",
     grid = {
       {1, 1, 0},
       {0, 1, 1},
@@ -68,10 +70,12 @@ local K_PLACEMENTS = {
 }
 
 function init_placement()
-  g_state.placement_idx = 6
+  g_state.placement_idx = nil
+  g_state.placement_permutation = {}
   g_state.placement_cache = {
     dirty = true,
     placable = false,
+    implacable_reason = 1,
     turret_potentials = {}
   }
   next_placement()
@@ -106,8 +110,13 @@ function placement_height()
 end
 
 -- returns true if current placement could be validly emplaced at its current location.
+-- also returns a 'reason'
 function placement_placable()
   local placement = g_state.placement
+
+  if g_state.svy.money < K_PLACEMENT_COST then
+    return false, 1
+  end
 
   -- check for direct collision with any other obstruction
   if not board_test_free({
@@ -116,19 +125,23 @@ function placement_placable()
     grid=g_state.placement.grid,
     mask=K_OBSTRUCTION
   }) then
-    return false
+    return false, 2
   end
 
   -- check that path would not be interrupted by placing this.
   board_push_temporary_change_from_grid(placement.x, placement.y, placement.grid, K_OBSTRUCTION)
   local reachable = svy_goal_reachable()
   board_pop_temporary_change()
-  return reachable
+  return reachable, tern(reachable, 0, 3)
 end
 
 function next_placement()
+  if g_state.placement_idx == nil or g_state.placement_idx >= #K_PLACEMENTS then
+    g_state.placement_idx = 0
+    g_state.placement_permutation = shuffle(iota(#K_PLACEMENTS))
+  end
   local idx = g_state.placement_idx
-  local base = K_PLACEMENTS[(idx % #K_PLACEMENTS) + 1]
+  local base = K_PLACEMENTS[g_state.placement_permutation[idx + 1]]
   assert(base)
   assert(base.grid ~= nil)
   local default_x, default_y = 14, 8
@@ -159,7 +172,7 @@ function placement_get_cache()
   local placement = g_state.placement
   if cache.dirty then
     cache.dirty = false
-    cache.placable = placement_placable()
+    cache.placable, cache.implacable_reason = placement_placable()
     if cache.placable then
       board_push_temporary_change_from_grid(placement.x, placement.y, placement.grid, K_OBSTRUCTION)
       cache.turret_potentials = turret_get_potentials_at_grid(
@@ -180,7 +193,7 @@ function draw_placement()
   if placement ~= nil and placement.type == "block" then
     local image = g_images.blocks[placement.color]
     if not cache.placable then
-      image = g_images.blocks.red2
+      image = ({g_images.blocks.gray, g_images.blocks.red2, g_images.blocks.red})[cache.implacable_reason]
       love.graphics.setColor(1, 1, 1, 0.5)
     end
     for y, row in ipairs(g_state.placement.grid) do
@@ -193,12 +206,24 @@ function draw_placement()
       end
     end
 
-    -- turrets
+    -- turret previews
     if cache.placable then
       love.graphics.setColor(1, 1, 1, 0.3 + 0.2 * (math.floor(g_state.time * 10) % 2))
       for idx, turret in pairs(cache.turret_potentials) do
         local margin = 8
+
+        -- fill rect
         love.graphics.rectangle("fill", turret.x * k_dim_x + margin, turret.y * k_dim_y + margin, turret.w * k_dim_x - 2 * margin, turret.h * k_dim_y - 2 * margin)
+      end
+
+      love.graphics.setColor(1, 1, 0.5, 0.8 + 0.03 * (math.sin(g_state.time * math.tau / 2)))
+      for idx, turret in pairs(cache.turret_potentials) do
+        local props = turret_get_props_by_size(turret.size)
+
+        -- range circle
+        local interval = 3
+        local offset = (g_state.time * 3)
+        draw_concentric_circles((turret.x + turret.w / 2) * k_dim_x, (turret.y + turret.h / 2) * k_dim_y, (props.min_range) * k_dim_x, props.max_range * k_dim_x, interval, offset, true)
       end
     end
   end
@@ -216,6 +241,8 @@ function placement_emplace()
     value = placement.color
   })
   assert(success)
+
+  g_state.svy.money = g_state.svy.money - K_PLACEMENT_COST
 
   turret_emplace_potentials_at_grid(placement.x, placement.y, placement.grid, placement.dx, placement.dy)
 

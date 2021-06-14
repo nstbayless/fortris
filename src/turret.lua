@@ -42,6 +42,52 @@ function turret_location_in_use(x, y, w, h, used)
   return false
 end
 
+function turret_get_props_by_size(size)
+  local sprites = {{sprite = g_images.turret_base}, {sprite = g_images.turret}}
+
+  local props = {
+    target = nil,
+    min_range = 1,
+    max_range = 5,
+    damage = 0.25,
+    firing_interval = 0.5,
+    firing_timer = 0.12,
+  }
+
+  if size == 3 then
+    sprites = {{sprite = nil}, {sprite = g_images.artillery}}
+    props = {
+      target = nil,
+      min_range = 5,
+      max_range = 12,
+      damage = 4,
+      firing_interval = 10 / 3,
+      firing_timer = 2.1,
+    }
+  end
+
+  if size == 4 then
+    -- TODO: a bigger sprite.
+    sprites = {{sprite = nil}, {sprite = g_images.artillery}}
+    props = {
+      target = nil,
+      min_range = 5,
+      max_range = 12,
+      damage = 20,
+      firing_interval = 4.5,
+      firing_timer = -2,
+    }
+  end
+
+  -- apply sprite offset
+  for sprite in entries(sprites) do
+    sprite.sprite_offx = k_dim_x * size / 2
+    sprite.sprite_offy = k_dim_y * size / 2
+  end
+
+  return props, sprites
+end
+
 function turret_get_potential_at(x, y, size, dx, dy, used)
   -- optimization / early out
   if turret_location_in_use(x, y, 1, 1, used) then
@@ -151,46 +197,7 @@ function turret_emplace_potentials_at_grid(x, y, grid, dx, dy)
   local potentials = turret_get_potentials_at_grid(x, y, grid, dx, dy)
   for potential in entries(potentials) do
     assert(potential.x and potential.y and potential.size)
-    local sprites = {{sprite = g_images.turret_base}, {sprite = g_images.turret}}
-    local props = {
-      target = nil,
-      min_range = 1,
-      max_range = 5,
-      damage = 0.25,
-      firing_interval = 0.5,
-      firing_timer = 0.12,
-    }
-
-    if potential.size == 3 then
-      sprites = {{sprite = nil}, {sprite = g_images.artillery}}
-      props = {
-        target = nil,
-        min_range = 5,
-        max_range = 12,
-        damage = 4,
-        firing_interval = 10 / 3,
-        firing_timer = 2.1,
-      }
-    end
-
-    if potential.size == 4 then
-      -- TODO: a bigger sprite.
-      sprites = {{sprite = nil}, {sprite = g_images.artillery}}
-      props = {
-        target = nil,
-        min_range = 5,
-        max_range = 12,
-        damage = 20,
-        firing_interval = 4.5,
-        firing_timer = -2,
-      }
-    end
-
-    -- apply sprite offset
-    for sprite in entries(sprites) do
-      sprite.sprite_offx = k_dim_x * potential.size / 2
-      sprite.sprite_offy = k_dim_y * potential.size / 2
-    end
+    local props, sprites = turret_get_props_by_size(potential.size)
 
     static_emplace({
       x = potential.x,

@@ -12,7 +12,9 @@ function svy_init()
   g_state.svy = {
     color = "purple",
     building_idxs = {castle_id},
-    protectee_idxs = {castle_id}
+    protectee_idxs = {castle_id},
+    money = 70,
+    hp = 20,
   }
 end
 
@@ -49,4 +51,11 @@ end
 function svy_goal_reachable()
   local path, length = svy_pathfind_to_goal(0, 0)
   return path ~= nil
+end
+
+function svy_draw_overlay()
+  love.graphics.setColor(1, 1, 0.5)
+  local text = love.graphics.newText(g_font, "$" .. tostring(g_state.svy.money) .. "   HP:" .. tostring(g_state.svy.hp))
+  love.graphics.draw(text, 0, 0)
+  love.graphics.setColor(1, 1, 1)
 end
