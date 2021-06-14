@@ -293,7 +293,7 @@ function update_placement(dx, dy, dr)
       g_state.placement_cache.dirty = true
     end
 
-    if key_pressed("space") then
+    if key_pressed("space") or key_pressed("return") then
       if placement_placable() then
         placement_emplace()
       end

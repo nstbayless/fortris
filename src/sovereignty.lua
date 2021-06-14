@@ -15,7 +15,7 @@ function svy_init()
     building_idxs = {castle_id},
     protectee_idxs = {castle_id},
     money = 36,
-    hp = 20,
+    hp = 3,
   }
 end
 
@@ -26,6 +26,15 @@ function svy_gain_bounty(amount)
     -- TODO -- make this by observer.
     -- (placement cache depends on whether or not there are enough funds for the blocks)
     g_state.placement_cache.dirty = true
+  end
+end
+
+function svy_lose_hp(amount)
+  amount = amount or 1
+  g_state.svy.hp = g_state.svy.hp - amount
+  camera_apply_shake(0.2, 2, 3)
+  if g_state.svy.hp <= 0 then
+    g_state.game_over = true
   end
 end
 
@@ -66,7 +75,11 @@ end
 
 function svy_draw_overlay()
   love.graphics.setColor(1, 1, 0.5)
-  local text = love.graphics.newText(g_font, "$" .. tostring(g_state.svy.money) .. "   HP:" .. tostring(g_state.svy.hp))
+  local s = "$" .. tostring(g_state.svy.money) .. "   HP:" .. tostring(g_state.svy.hp)
+  if g_state.game_over then
+    s = "Game Over. Press Space to restart."
+  end
+  local text = love.graphics.newText(g_font, s)
   love.graphics.draw(text, 0, 0)
   love.graphics.setColor(1, 1, 1)
 end

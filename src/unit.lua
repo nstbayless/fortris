@@ -235,7 +235,7 @@ function unit_update(id, dt)
     unit_remove(unit.id)
 
     -- damage sovereignty
-    g_state.svy.hp = g_state.svy.hp - 1
+    svy_lose_hp()
   end
 end
 

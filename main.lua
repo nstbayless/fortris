@@ -8,6 +8,7 @@ k_block_colors = {"blue", "darkgray", "gray", "green", "lightblue", "orange", "y
 
 g_state = {}
 g_images = {}
+g_shaders = {}
 
 require("src.util")
 require("src.misc")
@@ -28,7 +29,9 @@ function init_state()
     time = 0,
     spawn_rate = 1/5,
     spawn_progress = 0.5,
-    spawn_timer = 0
+    spawn_timer = 0,
+    game_over = false,
+    game_over_timer = 0
   }
   pf_init()
   board_init()
@@ -46,6 +49,19 @@ function love.load()
   for i = 1,100 + math.random(100) do
     math.random()
   end
+
+  g_shaders.game_over = love.graphics.newShader([[
+
+    uniform float weight;
+
+      vec4 effect( vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords )
+      {
+          vec4 texcolor = Texel(tex, texture_coords);
+          vec4 c = texcolor * color;
+          float middle = (c.r + c.g + c.b) / 3.0;
+          return vec4(middle, middle, middle, c.a) * weight + c * (1.0 - weight);
+      }
+  ]])
 
   love.window.setMode(1424, 968)
   love.graphics.setDefaultFilter("linear", "nearest")
@@ -108,6 +124,14 @@ function love.draw()
   love.graphics.push()
   camera_apply_transform()
 
+  -- global shader
+  if g_state.game_over then
+    g_shaders.game_over:send("weight", math.clamp(g_state.game_over_timer / 2 - 0.5, 0, 0.9))
+    love.graphics.setShader(g_shaders.game_over)
+  else
+    love.graphics.setShader()
+  end
+
   -- draw these in world coordinates, (transformed by camera).
   do
     draw_background_layer()
@@ -116,7 +140,9 @@ function love.draw()
     unit_draw_all()
     effects_draw()
     board_draw_fog()
-    draw_placement()
+    if not g_state.game_over then
+      draw_placement()
+    end
   end
   love.graphics.pop()
 
@@ -125,29 +151,44 @@ function love.draw()
 end
 
 function love.update(dt)
+  if g_state.game_over then
+    g_state.game_over_timer = g_state.game_over_timer + dt
+
+    if g_state.game_over_timer >= 1.5 and (key_pressed("space") or key_pressed("return")) then
+      -- restart game
+      init_state()
+    else
+      -- gradually slow down to a stop.
+      dt = dt * math.clamp(1 - g_state.game_over_timer / 4, 0, 1)
+    end
+  end
+
   g_state.time = g_state.time + dt
   update_input()
   dx = ibool(key_pressed("right")) - ibool(key_pressed("left"))
   dy = ibool(key_pressed("down")) - ibool(key_pressed("up"))
   dr = ibool(key_pressed("s")) - ibool(key_pressed("a"))
-  update_placement(dx, dy, dr)
 
-  -- spawning monsters
-  if g_state.placement_count >= 2 then
-    g_state.spawn_timer = g_state.spawn_timer + dt
-    g_state.spawn_rate = g_state.spawn_rate + dt / 500
-    g_state.spawn_progress = g_state.spawn_progress + dt * g_state.spawn_rate
-    while g_state.spawn_progress >= 1 do
-      g_state.spawn_progress = g_state.spawn_progress - 1
-      local sx, sy = board_perimeter_location(math.random(board_perimeter()))
-      unit_emplace(g_images.goblin, sx, sy, {
-        hp = tern(g_state.spawn_timer < 30, 1, 0.5 + g_state.spawn_timer / 30),
-        bounty = tern(g_state.spawn_rate > 1.2, 1, 2)
-      })
+  if dt > 0 then
+    update_placement(dx, dy, dr)
+
+    -- spawning monsters
+    if g_state.placement_count >= 2 then
+      g_state.spawn_timer = g_state.spawn_timer + dt
+      g_state.spawn_rate = g_state.spawn_rate + dt / 500
+      g_state.spawn_progress = g_state.spawn_progress + dt * g_state.spawn_rate
+      while g_state.spawn_progress >= 1 do
+        g_state.spawn_progress = g_state.spawn_progress - 1
+        local sx, sy = board_perimeter_location(math.random(board_perimeter()))
+        unit_emplace(g_images.goblin, sx, sy, {
+          hp = tern(g_state.spawn_timer < 30, 1, 0.5 + g_state.spawn_timer / 30),
+          bounty = tern(g_state.spawn_rate > 1.2, 1, 2)
+        })
+      end
     end
+    effects_update(dt)
+    static_update_all(dt)
+    unit_update_all(dt)
   end
-  effects_update(dt)
-  static_update_all(dt)
-  unit_update_all(dt)
   camera_update(dt)
 end

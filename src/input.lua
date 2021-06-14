@@ -1,5 +1,5 @@
 local k_controls = {
-  "up", "down", "left", "right", "a", "s", "space"
+  "up", "down", "left", "right", "a", "s", "space", "return"
 }
 local K_IDX_PRESSED = 1
 local K_IDX_HELD = 2

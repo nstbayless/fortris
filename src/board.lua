@@ -7,6 +7,8 @@ K_STATIC_ALL = bit.bor(K_STATIC, K_STATIC_OBSTRUCTION)
 K_OBSTRUCTION = bit.bor(K_WALL_MASK_OBSTRUCTION, K_STATIC_OBSTRUCTION)
 K_NO_SHADOWS = 0
 
+g_board_observers = {}
+
 function board_init()
   g_state.board = {
     left = 0;
@@ -17,6 +19,8 @@ function board_init()
     temporary_edits = {}, -- list of {{x, y, mask, value}, ...} sets; temporarily modify these values of the board. (sparse.)
     path_dirty = true
   }
+
+  g_board_observers = {}
 
   board_update_bounds(0, 40, 0, 24)
 end
@@ -424,8 +428,6 @@ function board_refresh_pathing()
 
   pf_update_from_grid()
 end
-
-g_board_observers = {}
 
 function board_observe(fn)
   table.insert(g_board_observers, fn)
