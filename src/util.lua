@@ -88,23 +88,35 @@ end
 
 -- iterate over 2d array
 -- for y, x, v in array_2d_iterate(a) do ... end
-function array_2d_iterate(a, base_idx)
+function array_2d_iterate(a, base_idx, dx, dy)
   assert(a ~= nil)
+  if dx and dy then
+    dx, dy = sign(dx), sign(dy)
+    assert(dx ~= 0 and dy ~= 0)
+  else
+    dx = 1
+    dy = 1
+  end
+  local xstart, ystart, xend, yend =
+    tern(dx == 1, 1, width2d(a)),
+    tern(dy == 1, 1, height2d(a)),
+    tern(dx == -1, 0, width2d(a) + 1),
+    tern(dy == -1, 0, height2d(a) + 1)
   return function(state)
     local a = state.a
-    if state.y > height2d(a) then
+    if state.y == state.yend then
       return nil, nil, nil
     end
     local y = state.y
     local x = state.x
     local v = a[state.y][state.x]
-    state.x = state.x + 1
-    if state.x > width2d(a) then
-      state.x = 1
-      state.y = state.y + 1
+    state.x = state.x + state.dx
+    if state.x == state.xend then
+      state.x = state.xstart
+      state.y = state.y + state.dy
     end
     return y - state.offset, x - state.offset, v
-  end, {a=a, x=1, y=1, offset = -(base_idx or 1) + 1}, 0
+  end, {a=a, x=xstart, y=ystart, xstart=xstart, ystart=ystart, xend=xend, yend=yend, offset = -(base_idx or 1) + 1, dx = dx, dy = dy}, 0
 end
 
 -- ternary if

@@ -180,6 +180,8 @@ function next_placement(is_first_placement)
     dx = 1,
     dy = 1
   }
+  -- rotate randomly
+  rotate_placement(math.random(4))
   g_state.placement_cache.dirty = true
 end
 
@@ -272,6 +274,20 @@ function placement_emplace()
   next_placement()
 end
 
+function rotate_placement(dr, placement)
+  local placement = placement or g_state.placement
+  for iter = 1,(math.abs(dr) % 4) do
+    if dr >= 1 then
+      placement.grid = rotate_2d_array_cw(placement.grid)
+      placement.dx, placement.dy = placement.dy, -placement.dx
+    end
+    if dr <= -1 then
+      placement.grid = rotate_2d_array_ccw(placement.grid)
+      placement.dx, placement.dy = -placement.dy, placement.dx
+    end
+  end
+end
+
 function update_placement(dx, dy, dr)
   if g_state.placement then
     local proposed_placement = table.clone(g_state.placement)
@@ -281,14 +297,7 @@ function update_placement(dx, dy, dr)
     proposed_placement.y = proposed_placement.y + dy
 
     -- rotate
-    if dr == 1 then
-      proposed_placement.grid = rotate_2d_array_cw(proposed_placement.grid)
-      proposed_placement.dx, proposed_placement.dy = proposed_placement.dy, -proposed_placement.dx
-    end
-    if dr == -1 then
-      proposed_placement.grid = rotate_2d_array_ccw(proposed_placement.grid)
-      proposed_placement.dx, proposed_placement.dy = -proposed_placement.dy, proposed_placement.dx
-    end
+    rotate_placement(dr, proposed_placement)
 
     -- update placement only if any actual change was made.
     if dr ~= 0 or dx ~= 0 or dy ~= 0 then

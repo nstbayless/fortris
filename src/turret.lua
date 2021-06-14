@@ -11,7 +11,7 @@ function turret_get_potentials_at_grid(x, y, grid, dx, dy)
   dy = dy or 1
   local used = {}
   for size = 4,2,-1 do -- try largest sizes first
-    for yo, xo, v in array_2d_iterate(grid, 0) do
+    for yo, xo, v in array_2d_iterate(grid, 0, dx, dy) do
       local p = turret_get_potential_at(x + xo, y + yo, size, dx, dy, used)
       if p then
         table.insert(a, p)
