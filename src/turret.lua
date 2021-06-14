@@ -70,7 +70,9 @@ function turret_get_potential_at(x, y, size, dx, dy, used)
           return {
             x = x + offx,
             y = y + offy,
-            size = size
+            size = size,
+            w = size,
+            h = size
           }
         end
       end
@@ -102,6 +104,8 @@ function turret_update(dt, id, turret)
     if props.target then
       props.firing_timer = props.firing_timer - props.firing_interval
       do_shoot = true
+      -- damage target
+      unit_apply_damage(props.target, props.damage)
     else
       props.firing_timer = props.firing_interval
     end
@@ -109,24 +113,37 @@ function turret_update(dt, id, turret)
 
   local target = unit_get(props.target)
 
-  -- face target
+  -- animation: face target
+  local angle_offset = 0
   if target then
-    local offset = get_rotation_offset_for_animation(8, target.x + 0.5 - cx, target.y + 0.5 - cy)
-    if offset then
-      turret.sprites[2].sprite_subimage = offset
+    angle_offset = get_rotation_offset_for_animation(8, target.x + 0.5 - cx, target.y + 0.5 - cy)
+    if angle_offset then
+      turret.sprites[2].sprite_subimage = angle_offset
+    else
+      angle_offset = 0
     end
   end
 
-  -- shooting animation
-  if props.firing_timer < 0.15  then
+  -- animation: shooting
+  if props.firing_timer < props.firing_interval / 4.5  then
     turret.sprites[2].sprite_subimage = (turret.sprites[2].sprite_subimage % 8) + 8
   else
     turret.sprites[2].sprite_subimage = turret.sprites[2].sprite_subimage % 8
   end
 
-  -- damage target
+  -- muzzle flash
   if do_shoot then
-    unit_apply_damage(props.target, props.damage)
+    muzzle_centre_x = cx * k_dim_x + 18 * math.sin(angle_offset * math.tau / 8)
+    muzzle_centre_y = cy * k_dim_y - 18 * math.cos(angle_offset * math.tau / 8) - 2
+
+    effects_create({
+      x = muzzle_centre_x,
+      y = muzzle_centre_y,
+      sprite = g_images.muzzle,
+      duration = 0.5,
+      subimage_range = {angle_offset * 8, angle_offset * 8 + 8},
+      scale = 2
+    })
   end
 end
 

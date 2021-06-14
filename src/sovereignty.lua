@@ -24,9 +24,10 @@ function svy_pathfind_to_goal(x, y)
   end
   local protectee = static_get(svy.protectee_idxs[1])
   local px, py = protectee.x, protectee.y
-  board_push_temporary_pathable_from_grid(protectee.x, protectee.y, protectee.grid)
+  -- temporarily consider the goal to be pathable.
+  board_push_temporary_change_from_grid(protectee.x, protectee.y, protectee.grid, K_OBSTRUCTION, 0)
   local path, length = board_pathfind(x, y, px, py)
-  board_pop_temporary_pathable()
+  board_pop_temporary_change()
   return path, length
 end
 

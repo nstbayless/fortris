@@ -12,7 +12,7 @@ function board_init()
     top = 0;
     bottom = 0;
     grid = {},
-    force_pathable = {}, -- list of {{x, y, pathable}...}; allow/forbid pathfinding through these tiles even if they are nonpathable.
+    temporary_edits = {}, -- list of {{x, y, mask, value}, ...} sets; temporarily modify these values of the board. (sparse.)
     path_dirty = true
   }
 
@@ -74,7 +74,7 @@ function board_iterate(board)
     end
     local y = state.y
     local x = state.x
-    local v = board.grid[state.y][state.x]
+    local v = board_get_value(state.x, state.y)
     state.x = state.x + 1
     if state.x >= board.right then
       state.x = board.left
@@ -132,6 +132,29 @@ function board_draw()
   end
 end
 
+function board_get_value(x, y)
+  local board = g_state.board
+  if not board.grid[y] then
+    return nil
+  end
+  local v = board.grid[y][x]
+  if v == nil then
+    return nil
+  end
+
+  -- check temporary edits
+  for idx, edits in ipairs(board.temporary_edits) do
+    for _, e in ipairs(edits) do
+      local ex, ey, mask, value = unpack(e)
+      if ex == x and ey == y then
+        return bit.bor(bit.band(v, bit.bnot(mask)), bit.band(mask, value))
+      end
+    end
+  end
+
+  return v
+end
+
 -- writes values to the board, if they don't collide with another value.
 -- returns true if successful, false if fails (a collision)
 -- base_x, base_y: the top-left coordinate to write to the board at.
@@ -162,6 +185,11 @@ function board_emplace(opts, test)
   grid = grid or {{1}}
   bounds = d(bounds, cmask)
   local board = g_state.board
+
+  if not test and #board.temporary_edits > 0 then
+    assert(false, "cannot place value on board if temporary board edits are in effect.")
+  end
+
   -- do two passes:
   -- first pass is the "test" run. Check for collisions. (skip if opts.force)
   -- second pass is the "emplace" run. Write values. (skip if test)
@@ -173,7 +201,7 @@ function board_emplace(opts, test)
       on_board = false
       if x >= board.left and x < board.right and y >= board.top and y < board.bottom then
         on_board = true
-        board_value = board.grid[y][x]
+        board_value = board_get_value(x, y)
       end
 
       local obstruction = bit.band(board_value, cmask) ~= 0 and grid_value ~= 0
@@ -229,30 +257,42 @@ function board_test_collides(opts)
   return not board_test_free(opts)
 end
 
-function board_push_temporary_pathable_from_grid(x, y, grid, impathable)
-  assert(grid ~= nil)
+function board_push_temporary_change_from_grid(x, y, grid, mask, value)
+  assert(x and y and grid and mask)
   local a = {}
   for yo, xo, v in array_2d_iterate(grid) do
     if v ~= 0 then
-      table.insert(a, {x + xo - 1, y + yo - 1, impathable or 0})
+      table.insert(a, {x + xo - 1, y + yo - 1, mask, value or mask})
     end
   end
-  board_push_temporary_pathable(a)
+  board_push_temporary_change(a)
 end
 
-function board_push_temporary_pathable(tiles)
-  g_state.board.path_dirty = true
-  if type(tiles[1]) == "number" then
-    table.insert(g_state.board.force_pathable, {tiles})
-  elseif type(tiles[1]) == "table" then
-    table.insert(g_state.board.force_pathable, tiles)
-  else
-    assert(false)
+-- push array of {x, y, mask, value}
+function board_push_temporary_change(tiles)
+  -- edge case / early out
+  if #tiles == 0 then
+    return
   end
+
+  g_state.board.path_dirty = true
+
+  -- validate input
+  for idx, change in ipairs(tiles) do
+    local x, y, mask, value = unpack(change)
+    assert(x and y and mask and value)
+    assert(bit.band(bit.bnot(mask), value) == 0, "value must be subset of mask")
+  end
+
+  if type(tiles[1]) == "number" then
+    tiles = {tiles}
+  end
+
+  table.insert(g_state.board.temporary_edits, tiles)
 end
 
-function board_pop_temporary_pathable()
-  table.remove(g_state.board.force_pathable, #g_state.board.force_pathable)
+function board_pop_temporary_change()
+  table.remove(g_state.board.temporary_edits, #g_state.board.temporary_edits)
 end
 
 function board_refresh_pathing()
@@ -264,13 +304,6 @@ function board_refresh_pathing()
       grid[y - board.top + 1][x - board.left + 1] = 1
     else
       grid[y - board.top + 1][x - board.left + 1] = 0
-    end
-  end
-
-  -- temporary pathfinding permit
-  for _, b in ipairs(board.force_pathable) do
-    for _, tile in ipairs(b) do
-      grid[tile[2] - board.top + 1][tile[1] - board.left + 1] = tile[3] or 0
     end
   end
 

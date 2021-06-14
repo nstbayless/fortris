@@ -114,10 +114,28 @@ function unit_process_removals()
   g_state.remove_units = {}
 end
 
-function unit_apply_damage(id, amount)
+-- damages unit by the given amount
+-- set effect to false to suppress any blood splatter effect
+function unit_apply_damage(id, amount, effect)
+  if effect == nil then
+    effect = {
+      sprite = g_images.blood,
+      duration = 0.3 + math.frandom(0.3)
+    }
+  end
   local unit = unit_get(id)
   if unit then
+    local px, py = unit_get_precise_position(id)
     unit.health = unit.health - amount
+    if amount > 0 and effect and effect ~= 0 then
+      effects_create({
+        x = k_dim_x * math.frandom(-0.4, 0.4) + px,
+        y = k_dim_y * math.frandom(-0.4, 0.4) + py,
+        duration = effect.duration,
+        sprite = effect.sprite,
+        scale = 1 + math.frandom(0.6)
+      })
+    end
     if unit.health <= 0 then
       unit.health = 0
       unit_remove(id)
@@ -200,12 +218,12 @@ function unit_update(id, dt)
   end
 end
 
--- returns distance from (grid) x, y location to unit.
+-- returns precise distance from (grid) x, y location to unit in grid distance
 function unit_distance_to(x, y, id)
-  local unit = unit_get(id)
-  if unit then
+  local gx, gy = unit_get_precise_grid_position(id)
+  if gx and gy then
     -- TODO: factor in unit's offset.
-    return point_distance(x, y, unit.x + 0.5, unit.y + 0.5)
+    return point_distance(x, y, gx, gy)
   end
 end
 
@@ -231,17 +249,37 @@ function unit_draw_all()
   end
 end
 
+-- retrieves pixel x,y location of unit
+-- (also returns normalized dx, dy values.)
+function unit_get_precise_position(id)
+  local unit = unit_get(id)
+  if not unit then
+    return nil, nil
+  end
+  local ux = unit.dx / math.sqrt(unit.dx * unit.dx + unit.dy * unit.dy)
+  local uy = unit.dy / math.sqrt(unit.dx * unit.dx + unit.dy * unit.dy)
+  --love.graphics.circle("line", (unit.x + 0.5) * k_dim_x, (unit.y + 0.5) * k_dim_y, k_dim_x / 2)
+  local px = (unit.x + 0.5 + ux * unit.move_distance) * k_dim_x
+  local py = (unit.y + 0.5 + uy * unit.move_distance) * k_dim_y
+  return px, py, ux, uy
+end
+
+-- as above, but in grid coordinates
+function unit_get_precise_grid_position(id)
+  local px, py, ux, uy = unit_get_precise_position(id)
+  if not px then
+    return nil, nil
+  end
+  return px / k_dim_x, py / k_dim_y, ux, uy
+end
+
 function unit_draw(id)
   local unit = g_state.units[id]
   if not unit then
     return
   end
 
-  local ux = unit.dx / math.sqrt(unit.dx * unit.dx + unit.dy * unit.dy)
-  local uy = unit.dy / math.sqrt(unit.dx * unit.dx + unit.dy * unit.dy)
-  --love.graphics.circle("line", (unit.x + 0.5) * k_dim_x, (unit.y + 0.5) * k_dim_y, k_dim_x / 2)
-  local px = (unit.x + 0.5 + ux * unit.move_distance) * k_dim_x
-  local py = (unit.y + 0.5 + uy * unit.move_distance) * k_dim_y
+  local px, py, ux, uy = unit_get_precise_position(id)
   draw_unit_sprite(unit.sprite, unit.state, ux, uy, g_state.time * unit.animation_speed,
     px,
     py,

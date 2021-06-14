@@ -18,6 +18,7 @@ require("src.board")
 require("src.static")
 require("src.turret")
 require("src.sovereignty")
+require("src.effects")
 require("src.placement")
 require("src.camera")
 require("src.sprite")
@@ -26,13 +27,14 @@ require("src.unit")
 function init_state()
   g_state = {
     time = 0,
-    spawn_timer = 0
+    spawn_timer = 3
   }
   pf_init()
   board_init()
   static_init()
   unit_init()
   svy_init()
+  effects_init()
   init_placement()
   camera_init()
 end
@@ -50,6 +52,8 @@ function love.load()
   g_images.turret = new_sprite("resources/images/pd/hv/Turret.png", 60, 60, 29, 35)
   g_images.artillery = new_sprite("resources/images/pd/hv/Artillery.png", 80, 80, 40, 60)
   g_images.turret_base = new_sprite("resources/images/pd/hv/Turret-base.png", 60, 40, 21, 15)
+  g_images.blood = new_sprite("resources/images/pd/hv/blood.png", 20, 20, 10, 10)
+  g_images.muzzle = new_sprite("resources/images/pd/hv/Muzzle.png", 20, 20, 10, 15)
   g_images.blocks = {}
   for i, color in ipairs(k_block_colors) do
     g_images.blocks[color] = love.graphics.newImage("resources/images/pd/kdd-blocks/" .. color .. ".png")
@@ -103,6 +107,7 @@ function love.draw()
     static_draw_all()
     unit_draw_all()
     draw_placement()
+    effects_draw()
   end
   love.graphics.pop()
 end
@@ -120,6 +125,7 @@ function love.update(dt)
     local sx, sy = board_perimeter_location(math.random(board_perimeter()))
     unit_emplace(g_images.goblin, sx, sy)
   end
+  effects_update(dt)
   static_update_all(dt)
   unit_update_all(dt)
   camera_update(dt)

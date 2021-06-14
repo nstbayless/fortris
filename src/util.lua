@@ -279,4 +279,15 @@ function point_distance(x1, y1, x2, y2)
   return math.sqrt(dx * dx + dy * dy)
 end
 
+function math.frandom(a, b)
+  if a == nil then
+    a = 0
+  end
+  if b == nil then
+    a, b = 0, a
+  end
+
+  return a + math.random() * (b - a)
+end
+
 math.tau = math.pi * 2

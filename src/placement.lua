@@ -69,7 +69,18 @@ local K_PLACEMENTS = {
 
 function init_placement()
   g_state.placement_idx = 6
+  g_state.placement_cache = {
+    dirty = true,
+    placable = false,
+    turret_potentials = {}
+  }
   next_placement()
+
+  board_observe(
+    function() 
+      g_state.placement_cache.dirty = true
+    end
+  )
 end
 
 -- returns height, width of placement
@@ -109,9 +120,9 @@ function placement_placable()
   end
 
   -- check that path would not be interrupted by placing this.
-  board_push_temporary_pathable_from_grid(placement.x, placement.y, placement.grid, 1)
+  board_push_temporary_change_from_grid(placement.x, placement.y, placement.grid, K_OBSTRUCTION)
   local reachable = svy_goal_reachable()
-  board_pop_temporary_pathable()
+  board_pop_temporary_change()
   return reachable
 end
 
@@ -139,14 +150,36 @@ function next_placement()
     dx = 1,
     dy = 1
   }
+  g_state.placement_cache.dirty = true
+end
+
+-- returns cache; refreshes cache if necessary
+function placement_get_cache()
+  local cache = g_state.placement_cache
+  local placement = g_state.placement
+  if cache.dirty then
+    cache.dirty = false
+    cache.placable = placement_placable()
+    if cache.placable then
+      board_push_temporary_change_from_grid(placement.x, placement.y, placement.grid, K_OBSTRUCTION)
+      cache.turret_potentials = turret_get_potentials_at_grid(
+        placement.x, placement.y, placement.grid, placement.dx, placement.dy
+      )
+      board_pop_temporary_change()
+    else
+      cache.turret_potentials = {}
+    end
+  end
+  return cache
 end
 
 function draw_placement()
   love.graphics.setColor(1, 1, 1, 0.8)
+  local cache = placement_get_cache()
   local placement = g_state.placement
   if placement ~= nil and placement.type == "block" then
     local image = g_images.blocks[placement.color]
-    if not placement_placable() then
+    if not cache.placable then
       image = g_images.blocks.red2
       love.graphics.setColor(1, 1, 1, 0.5)
     end
@@ -157,6 +190,15 @@ function draw_placement()
           local world_pos_y = y + placement.y - 1
           draw_image_on_grid(image, world_pos_x, world_pos_y)
         end
+      end
+    end
+
+    -- turrets
+    if cache.placable then
+      love.graphics.setColor(1, 1, 1, 0.3 + 0.2 * (math.floor(g_state.time * 10) % 2))
+      for idx, turret in pairs(cache.turret_potentials) do
+        local margin = 8
+        love.graphics.rectangle("fill", turret.x * k_dim_x + margin, turret.y * k_dim_y + margin, turret.w * k_dim_x - 2 * margin, turret.h * k_dim_y - 2 * margin)
       end
     end
   end
@@ -198,7 +240,11 @@ function update_placement(dx, dy, dr)
       proposed_placement.dx, proposed_placement.dy = -proposed_placement.dy, proposed_placement.dx
     end
 
-    g_state.placement = proposed_placement
+    -- update placement only if any actual change was made.
+    if dr ~= 0 or dx ~= 0 or dy ~= 0 then
+      g_state.placement = proposed_placement
+      g_state.placement_cache.dirty = true
+    end
 
     if key_pressed("space") then
       if placement_placable() then
