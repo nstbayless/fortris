@@ -17,6 +17,8 @@ function effects_update(dt)
   effects_process_removals()
   for id, effect in pairs(g_state.effects) do
     effect.timer = effect.timer + dt * effect.rate
+    effect.x =  effect.x + dt * effect.xspeed
+    effect.y =  effect.y + dt * effect.yspeed
     if (not effect.sprite) or effect.timer >= effect.animation_end then
       effects_remove(id)
     end
@@ -43,6 +45,8 @@ function effects_create(opts)
   g_state.effects[id] = {
     x = opts.x,
     y = opts.y,
+    xspeed = opts.xspeed or 0,
+    yspeed = opts.yspeed or 0,
     sprite = opts.sprite,
     rate = opts.rate or 0.2,
     timer = animation_begin,

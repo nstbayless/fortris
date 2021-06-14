@@ -159,7 +159,7 @@ function love.update(dt)
       init_state()
     else
       -- gradually slow down to a stop.
-      dt = dt * math.clamp(1 - g_state.game_over_timer / 4, 0, 1)
+      dt = dt * math.clamp(1 - g_state.game_over_timer / 3, 0, 1)
     end
   end
 

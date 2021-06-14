@@ -76,6 +76,9 @@ end
 function svy_draw_overlay()
   love.graphics.setColor(1, 1, 0.5)
   local s = "$" .. tostring(g_state.svy.money) .. "   HP:" .. tostring(g_state.svy.hp)
+  if g_state.spawn_timer <= 5 then
+    s = s .. "\nControls:\n  Arrow keys -> move\n  A and S -> rotate\n  Space -> place"
+  end
   if g_state.game_over then
     s = "Game Over. Press Space to restart."
   end

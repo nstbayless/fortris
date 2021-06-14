@@ -117,6 +117,47 @@ function unit_process_removals()
   g_state.remove_units = {}
 end
 
+-- kills unit with blood splatter
+function unit_splatter(id)
+  local unit = unit_get(id)
+  if unit then
+    for i = 1,7 + math.random(5) do
+      local effect = {
+        sprite = g_images.blood,
+        duration = 0.3 + math.frandom(0.3)
+      }
+      local gx, gy = unit_get_precise_grid_position(id)
+      local dx, dy = math.frandom(-0.7, 0.7), math.frandom(-0.7, 0.7)
+      effects_create({
+        x = k_dim_x * (dy + gx),
+        y = k_dim_y * (dy + gy),
+        duration = 0.2 + math.frandom(0.6),
+        sprite = g_images.blood,
+        scale = 1 + math.frandom(1),
+        xspeed = dx * k_dim_x * 2 + math.frandom(-1, 1) * k_dim_x,
+        yspeed = dy * k_dim_y * 2 + math.frandom(-1, 1) * k_dim_y,
+      })
+    end
+    unit_remove(id)
+  end
+end
+
+function unit_splatter_at_grid(x, y, grid)
+  local splatter_count = 0
+  for xo, yo, v in array_2d_iterate(grid, 0) do
+    if v then
+      for id, unit in unit_iterate() do
+        if unit.x == x + xo and unit.y == y + yo then
+          unit_splatter(id)
+          splatter_count = splatter_count + 1
+        end
+      end
+    end
+  end
+
+  return splatter_count
+end
+
 -- damages unit by the given amount
 -- set effect to false to suppress any blood splatter effect
 function unit_apply_damage(id, amount, effect)

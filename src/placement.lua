@@ -263,8 +263,11 @@ function placement_emplace()
 
   turret_emplace_potentials_at_grid(placement.x, placement.y, placement.grid, placement.dx, placement.dy)
 
+  local splatter_count = unit_splatter_at_grid(placement.x, placement.y, placement.grid)
+  local splatter_shake = 1 + math.sqrt(splatter_count)
+
   -- shake effect
-  camera_apply_shake(0.15, 1.6)
+  camera_apply_shake(0.15 * splatter_shake, 1.6 * splatter_shake)
 
   next_placement()
 end
