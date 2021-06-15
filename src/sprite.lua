@@ -22,16 +22,43 @@ function new_sprite(image, width, height, offx, offy)
   return animation
 end
 
-function draw_sprite(animation, t, x, y, r, sx, sy)
-  if animation == nil then
+-- draws sprite at given frame.
+-- if fn is set, draw using the given function instead.
+function draw_sprite(sprite, t, x, y, r, sx, sy, fn)
+  if sprite == nil then
     return
   end
-  if t >= #animation.quads then
+  if t >= #sprite.quads then
     return
   end
   local spriteNum = (math.floor(t)) + 1
   sx = sx or 1
   sy = sy or 1
   r = r or 0
-  love.graphics.draw(animation.spriteSheet, animation.quads[spriteNum], x - sx * animation.offx, y - sy * animation.offy, r, sx, sy)
+  fn = fn or love.graphics.draw
+  -- TODO: use ox, oy (origin offset)
+  return fn(sprite.spriteSheet, sprite.quads[spriteNum], x - sx * sprite.offx, y - sy * sprite.offy, r, sx, sy)
+end
+
+function sprite_batch_add_sprite(sprite_batch, sprite, t, x, y, r, sx, sy)
+  return draw_sprite(sprite, t, x, y, r, sx, sy,
+    function(image, ...)
+      assert(image == sprite_batch:getTexture())
+      return sprite_batch:add(...)
+    end
+  )
+end
+
+function sprite_batch_set_sprite(sprite_batch, idx, sprite, t, x, y, r, sx, sy)
+  return draw_sprite(sprite, t, x, y, r, sx, sy,
+    function(image, ...)
+      assert(image == sprite_batch:getTexture())
+      assert(sprite_batch and idx and idx >= 0)
+      return sprite_batch:set(idx, ...)
+    end
+  )
+end
+
+function sprite_batch_remove(sprite_batch, idx)
+  sprite_batch:set(idx, 0, 0, 0, 0, 0)
 end

@@ -57,8 +57,8 @@ function svy_position_is_at_goal(x, y)
   for goal_idx in entries(g_state.svy.protectee_idxs) do
     local goal = static_get(goal_idx)
     if goal then
-      for xo, yo in array_2d_iterate(goal.grid) do
-        if x == xo + goal.x - 1 and y == yo + goal.y - 1 then
+      for yo, xo in array_2d_iterate(goal.grid, 0) do
+        if x == xo + goal.x and y == yo + goal.y then
           return true
         end
       end

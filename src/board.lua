@@ -7,6 +7,10 @@ K_STATIC_ALL = bit.bor(K_STATIC, K_STATIC_OBSTRUCTION)
 K_OBSTRUCTION = bit.bor(K_WALL_MASK_OBSTRUCTION, K_STATIC_OBSTRUCTION)
 K_NO_SHADOWS = 0
 
+K_BOARD_EVENT_SET = 0
+K_BOARD_EVENT_RESIZE_BEGIN = 1
+K_BOARD_EVENT_RESIZE_END = 2
+
 g_board_observers = {}
 
 function board_init()
@@ -25,6 +29,12 @@ function board_init()
   board_update_bounds(0, 40, 0, 24)
 end
 
+function board_emit_event(opts)
+  for _, observer in pairs(g_board_observers) do
+    observer(opts)
+  end
+end
+
 -- new tile added to board
 function board_generate_tile(x, y)
   return K_FOG_OF_WAR
@@ -41,8 +51,15 @@ function board_update_bounds(left, right, top, bottom)
   local ptop = board.top
   local pbottom = board.bottom
 
-  -- adjust grid
+  -- notify observers
+  board_emit_event({
+    etype = K_BOARD_EVENT_RESIZE_BEGIN,
+    left = left, right = right, top = top, bottom = bottom,
+    pleft = pleft, pright = pright, ptop = ptop, pbottom = pbottom
+  })
 
+  -- adjust grid
+  local updates = {}
   for y = math.min(ptop,top),math.max(pbottom, bottom) - 1 do
     if not in_range(y, top, bottom) and in_range(y, ptop, pbottom) then
       -- remove row
@@ -52,13 +69,17 @@ function board_update_bounds(left, right, top, bottom)
         -- add row
         board.grid[y] = {}
         for x = left,right - 1 do
-          board.grid[y][x] = board_generate_tile(x, y)
+          local value = board_generate_tile(x, y)
+          board.grid[y][x] = value
+          table.insert(updates, {x, y, value})
         end
       else
         for x = math.min(left,pleft),math.max(right, pright) - 1 do
           if in_range(x, left, right) and not in_range(x, pleft, pright) then
             -- new tile
-            board.grid[y][x] = 0
+            local value = board_generate_tile(x, y)
+            board.grid[y][x] = value
+            table.insert(updates, {x, y, value})
           elseif not in_range(x, left, right) and in_range(x, pleft, pright) then
             board.grid[y]:remove(x)
           end
@@ -74,10 +95,29 @@ function board_update_bounds(left, right, top, bottom)
    board.bottom = bottom
 
    pf_reset(right - left, bottom - top)
+
+   -- notify observers of new tiles
+   for _, update in ipairs(updates) do
+    -- TODO: combine updates into a single grid...
+    board_emit_event({
+      etype = K_BOARD_EVENT_SET,
+      during_board_resize = true,
+      x = update[1], y = update[2], grid = {{1}}, mask = bit.bnot(0), value = update[3],
+    })
+   end
+
+   -- notify observers (that we're done now.)
+   board_emit_event({
+    etype = K_BOARD_EVENT_RESIZE_END,
+    left = left, right = right, top = top, bottom = bottom,
+    pleft = pleft, pright = pright, ptop = ptop, pbottom = pbottom
+  })
+
    board_refresh_pathing()
 end
 
 function board_iterate(board)
+  board = board or g_state.board
   return function(state)
     local board = state.board
     if state.y >= board.bottom then
@@ -129,122 +169,15 @@ function board_perimeter_location(i)
   return 0, 0
 end
 
--- wall image indices
-K_WALL_INNER_CORNER = {
-  {17, 16}, {13, 12}
-}
-
-K_WALL_OUTER_CORNER = {
-  {0, 2}, {8, 10}
-}
-
-K_WALL_HORIZONTAL = {
-  1, 9
-}
-
-K_WALL_VERTICAL = {
-  4, 6
-}
-
-K_SHADOW = {
-  nil, 20, 21, 26,
-  23, 24, 22, 25,
-}
-
--- returns one of four corner tiles for the wall at the given idx
-function wall_get_subtile(base_x, base_y, dx, dy, mask, edges_are_walls)
-  assert(dx and dy and dx ~= 0 and dy ~= 0)
-  local wall_at = {}
-  
-  -- check 2x2 square to see what walls are there.
-  for y in ordered_range(base_y, base_y + dy) do
-    wall_at[y] = {}
-    for x in ordered_range(base_x, base_x + dx) do
-      wall_at[y][x] = bit.band(d(board_get_value(x, y, edges_are_walls and mask or 0), 0), mask) ~= 0
-    end
-  end
-
-  -- indices for selecting subimages from lists
-  local imgx = tern(dx > 0, 2, 1)
-  local imgy = tern(dy > 0, 2, 1)
-
-  -- if base position has no wall, then there is no wall.
-  if not wall_at[base_y][base_x] then
-    if dx == 1 and dy == 1 then
-      -- bottom-right corner never has shadows.
-      return nil
-    end
-    -- no wall, but possibly shadows
-    local left = dx == -1 and wall_at[base_y][base_x + dx]
-    local top = dy == -1 and wall_at[base_y + dy][base_x]
-    local diagonal = (dx == -1 and dy == -1 and wall_at[base_y + dy][base_x + dx]) or (dx == 1 and dy == -1 and top) or (dy == 1 and dx == -1 and left)
-
-    return K_SHADOW[tern(left, 1, 0) + tern(top, 2, 0) + tern(diagonal, 4, 0) + 1]
-  else
-    -- full region or inner corner
-    if wall_at[base_y + dy][base_x] and wall_at[base_y][base_x + dx] then
-      if wall_at[base_y + dy][base_x + dx] then
-        -- full
-        return 5
-      else
-        return K_WALL_INNER_CORNER[imgy][imgx]
-      end
-    end
-
-    -- horizontal wall
-    if wall_at[base_y][base_x + dx] and not wall_at[base_y + dy][base_x] then
-      return K_WALL_HORIZONTAL[imgy]
-    end
-
-    -- vertical  wall
-    if wall_at[base_y + dy][base_x] and not wall_at[base_y][base_x + dx] then
-      return K_WALL_VERTICAL[imgx]
-    end
-
-    -- outer corner
-    if not wall_at[base_y + dy][base_x] and not wall_at[base_y][base_x + dx] then
-      return K_WALL_OUTER_CORNER[imgy][imgx]
-    end
-  end
-end
-
-function wall_draw_at(x, y, sprite, mask, edges_are_walls)
-  for dy = -1,1,2 do
-    for dx = -1,1,2 do
-      local wall_subtile = wall_get_subtile(x, y, dx, dy, mask or K_WALL_MASK, edges_are_walls or false)
-      if wall_subtile then
-        draw_sprite(sprite or g_images.wall, wall_subtile,
-          (x + 0.25 + 0.25 * dx) * k_dim_x,
-          (y + 0.25 + 0.25 * dy) * k_dim_y
-        )
-      end
-    end
-  end
-end
-
--- draws terrain features / walls
-function board_draw()
-  for y, x, v in board_iterate(g_state.board) do
-    if bit.band(v, K_WALL_MASK) ~= 0 or bit.band(v, K_NO_SHADOWS) == 0 then
-      wall_draw_at(x, y, g_images.wall)
-    end
-  end
-end
-
-function board_draw_fog()
-  for y, x, v in board_iterate(g_state.board) do
-    if bit.band(v, K_FOG_OF_WAR) ~= 0 then
-      wall_draw_at(x, y, g_images.fog_of_war, K_FOG_OF_WAR, true)
-    end
-  end
-
+function board_draw_letterbox()
   -- draw borders
-  local m = 1000
+  local m = 10000
+  local board = g_state.board
   love.graphics.setColor(0, 0, 0)
-  love.graphics.rectangle("fill", -m, -m, m * 2 + board_width() * k_dim_x, m)
-  love.graphics.rectangle("fill", -m, 0, m, board_height() * k_dim_y)
-  love.graphics.rectangle("fill", board_width() * k_dim_x, 0, m, board_height() * k_dim_y)
-  love.graphics.rectangle("fill", -m, board_height() * k_dim_y, m * 2 + board_width() * k_dim_x, m)
+  love.graphics.rectangle("fill", board.left * k_dim_x -m, board.top * k_dim_y -m, m * 2 + board_width() * k_dim_x, m)
+  love.graphics.rectangle("fill", board.left * k_dim_x -m, board.top * k_dim_y, m, board_height() * k_dim_y)
+  love.graphics.rectangle("fill", board.right * k_dim_x, board.top * k_dim_y, m, board_height() * k_dim_y)
+  love.graphics.rectangle("fill", board.left * k_dim_x -m, board.bottom * k_dim_y, m * 2 + board_width() * k_dim_x, m)
   love.graphics.setColor(1, 1, 1)
 end
 
@@ -353,11 +286,11 @@ function board_emplace(opts, test)
 
   -- notify board observers of update
   if change_occurred then
-    for observer in entries(g_board_observers) do
-      observer({
-        x= base_x, y = base_y, grid = grid, mask = wmask, value = value
-      })
-    end
+    board_emit_event({
+      etype = K_BOARD_EVENT_SET,
+      during_board_resize = false,
+      x = base_x, y = base_y, grid = grid, mask = wmask, value = value,
+    })
   end
 
   -- success.
@@ -377,9 +310,9 @@ end
 function board_push_temporary_change_from_grid(x, y, grid, mask, value)
   assert(x and y and grid and mask)
   local a = {}
-  for yo, xo, v in array_2d_iterate(grid) do
+  for yo, xo, v in array_2d_iterate(grid, 0) do
     if v ~= 0 then
-      table.insert(a, {x + xo - 1, y + yo - 1, mask, value or mask})
+      table.insert(a, {x + xo, y + yo, mask, value or mask})
     end
   end
   board_push_temporary_change(a)

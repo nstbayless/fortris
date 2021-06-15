@@ -1,6 +1,18 @@
 -- allow debugging
 if arg[#arg] == "vsc_debug" then require("lldebugger").start() end
 
+-- match library
+if not bit then
+  if bit32 then
+    bit = bit32
+  elseif bit64 then
+    bit = bit64
+  else
+    bit = require("bitop.funcs")
+  end
+  assert(bit.band and bit.bnot and bit.bor)
+end
+
 k_dim_x = 32
 k_dim_y = 32
 
@@ -23,6 +35,7 @@ require("src.placement")
 require("src.camera")
 require("src.sprite")
 require("src.unit")
+require("src.board_graphics")
 
 function init_state()
   g_state = {
@@ -38,6 +51,7 @@ function init_state()
   static_init()
   unit_init()
   svy_init()
+  bgfx_init()
   effects_init()
   init_placement()
   camera_init()
@@ -49,21 +63,8 @@ function love.load()
   for i = 1,100 + math.random(100) do
     math.random()
   end
+  g_shaders.game_over = love.graphics.newShader("resources/shaders/game_over.shader")
 
-  g_shaders.game_over = love.graphics.newShader([[
-
-    uniform float weight;
-
-      vec4 effect( vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords )
-      {
-          vec4 texcolor = Texel(tex, texture_coords);
-          vec4 c = texcolor * color;
-          float middle = (c.r + c.g + c.b) / 3.0;
-          return vec4(middle, middle, middle, c.a) * weight + c * (1.0 - weight);
-      }
-  ]])
-
-  love.window.setMode(1424, 968)
   love.graphics.setDefaultFilter("linear", "nearest")
   g_font = love.graphics.newFont(24, "normal", dpi())
   g_images.grass = love.graphics.newImage("resources/images/f/checkered-grass.png")
@@ -140,6 +141,7 @@ function love.draw()
     unit_draw_all()
     effects_draw()
     board_draw_fog()
+    board_draw_letterbox()
     if not g_state.game_over then
       draw_placement()
     end

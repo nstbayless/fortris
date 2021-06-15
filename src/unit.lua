@@ -15,8 +15,8 @@ end
 
 function unit_path_intersects_grid(path, base_x, base_y, grid)
   for node in entries(path) do
-    for yo, xo, v in array_2d_iterate(grid) do
-      if v ~= 0 and node.x == base_x + xo - 1 and node.y == base_y + yo - 1 then
+    for yo, xo, v in array_2d_iterate(grid, 0) do
+      if v ~= 0 and node.x == base_x + xo and node.y == base_y + yo then
         return true
       end
     end
@@ -26,17 +26,19 @@ end
 
 -- repath any units whose current path intersects the update.
 function unit_on_board_update(det)
-  if false then
-    local base_x = det.x
-    local base_y = det.y
-    local grid = det.grid
-    for id, unit in pairs(g_state.units) do
-      if unit.path and unit_path_intersects_grid(unit.path, base_x, base_y, grid) then
-        unit_repath(id)
+  if det.etype == K_BOARD_EVENT_SET then
+    if false then
+      local base_x = det.x
+      local base_y = det.y
+      local grid = det.grid
+      for id, unit in pairs(g_state.units) do
+        if unit.path and unit_path_intersects_grid(unit.path, base_x, base_y, grid) then
+          unit_repath(id)
+        end
       end
+    else
+      unit_repath_all()
     end
-  else
-    unit_repath_all()
   end
 end
 
@@ -144,7 +146,7 @@ end
 
 function unit_splatter_at_grid(x, y, grid)
   local splatter_count = 0
-  for xo, yo, v in array_2d_iterate(grid, 0) do
+  for yo, xo, v in array_2d_iterate(grid, 0) do
     if v then
       for id, unit in unit_iterate() do
         if unit.x == x + xo and unit.y == y + yo then

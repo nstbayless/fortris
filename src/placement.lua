@@ -296,6 +296,10 @@ function update_placement(dx, dy, dr)
     proposed_placement.x = proposed_placement.x + dx
     proposed_placement.y = proposed_placement.y + dy
 
+    -- clamp
+    proposed_placement.x = math.clamp(proposed_placement.x, g_state.board.left, g_state.board.right - 1)
+    proposed_placement.x = math.clamp(proposed_placement.x, g_state.board.left, g_state.board.right - 1)
+
     -- rotate
     rotate_placement(dr, proposed_placement)
 
