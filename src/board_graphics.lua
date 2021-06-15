@@ -26,7 +26,7 @@ function bgfx_add(id, opts)
   opts.cmask = opts.cmask or opts.mask
   opts.indices = {}
   g_bgfx[id] = opts
-  bgfx_refesh(g_bgfx[id])
+  bgfx_refresh(g_bgfx[id])
 end
 
 function bgfx_get_sprite_batch_idx(x, y)
@@ -42,28 +42,29 @@ end
 
 function bgfx_refresh_tile(bgfx, x, y)
   -- (pass-by-reference idx into function to allow updating it.)
-  local idx = {bgfx_get_sprite_batch_idx(x, y)}
-  for i = idx[1],idx[1]+3 do
+  local idx = bgfx_get_sprite_batch_idx(x, y)
+  for i = idx,idx+3 do
     sprite_batch_remove(bgfx.sprite_batch, i)
   end
   wall_draw_at(x, y, bgfx.sprite_batch, bgfx.mask, bgfx.edges_are_walls, bgfx.shadows,
     function(sb, ...)
       local t = {...}
-      if bgfx.indices[idx[1]] == nil then
+      if bgfx.indices[idx] == nil then
+        --print("add new at", idx)
         local i = sprite_batch_add_sprite(sb, bgfx.sprite, unpack(t))
-        if i then
-          bgfx.indices[idx[1]] = i
-        end
+        assert(i) -- if this assertion is bothersome, it's not actually necessary.
+        bgfx.indices[idx] = i
       else
-        -- sprite_batch_set_sprite(sb, bgfx.indices[idx[1]], bgfx.sprite, unpack(t))
-        sprite_batch_remove(sb, bgfx.indices[idx[1]])
+        --print("replace")
+        sprite_batch_set_sprite(sb, bgfx.indices[idx], bgfx.sprite, unpack(t))
+        --sprite_batch_remove(sb, bgfx.indices[idx])
       end
-      idx[1] = idx[1] + 1
+      idx = idx + 1
     end
   )
 end
 
-function bgfx_refesh(bgfx)
+function bgfx_refresh(bgfx)
   bgfx.sprite_batch:clear()
   bgfx.indices = {}
   for y, x in board_iterate() do
@@ -76,21 +77,22 @@ function bgfx_on_board_update(event)
     -- refresh the given tile.
     if event.etype == K_BOARD_EVENT_SET and not event.during_board_resize then
       if bit.band(event.mask, bgfx.cmask) ~= 0 then
-        for yo, xo, v in array_2d_iterate(event.grid, 0) do
+        -- TODO / DEBUG: unclear why this "sparse update" logic fails.
+        --[[ for yo, xo, v in array_2d_iterate(event.grid, 0) do
           if v ~= 0 then
             local x = xo + event.x
             local y = yo + event.y
             bgfx_refresh_tile(bgfx, x, y)
           end
-        end
-      end
+        end --]]
 
-      bgfx_refesh(bgfx)
+        bgfx_refresh(bgfx)
+      end
     end
 
     -- full refresh
     if event.etype == K_BOARD_EVENT_RESIZE_END then
-      bgfx_refesh(bgfx)
+      bgfx_refresh(bgfx)
     end
   end
 end
@@ -199,22 +201,22 @@ end
 
 -- draws terrain features / walls
 function board_draw()
-  -- bgfx_refesh(g_bgfx["wall"])
   love.graphics.draw(g_bgfx["wall"].sprite_batch)
+
+  -- (immediate mode version)
   --[[ for y, x, v in board_iterate(g_state.board) do
     if bit.band(v, K_WALL_MASK) ~= 0 or bit.band(v, K_NO_SHADOWS) == 0 then
-      wall_draw_at(x, y, g_images.wall)
+      wall_draw_at(x, y, g_images.wall, K_WALL_MASK, false, false)
     end
   end --]]
 end
 
 function board_draw_fog()
-  -- bgfx_refesh(g_bgfx["fog"])
   love.graphics.draw(g_bgfx["fog"].sprite_batch)
   --[[
   for y, x, v in board_iterate(g_state.board) do
     if bit.band(v, K_FOG_OF_WAR) ~= 0 then
-      wall_draw_at(x, y, g_images.fog_of_war, K_FOG_OF_WAR, true)
+      wall_draw_at(x, y, g_images.fog_of_war, K_FOG_OF_WAR, true, false)
     end
   end --]]
 end
