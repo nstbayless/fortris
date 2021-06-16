@@ -105,7 +105,7 @@ function turret_get_potential_at(x, y, size, dx, dy, used)
           y = y + offy,
           grid = K_TURRET_GRID[size],
           all = true,
-          mask = K_WALL_MASK
+          mask = K_WALL
         }) and static_test_emplace({
           x = x + offx,
           y = y + offy,

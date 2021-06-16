@@ -1,17 +1,26 @@
-K_WALL_MASK = 0xff
-K_WALL_MASK_OBSTRUCTION = 0x7f
-K_STATIC = 0x100
+-- board tile bits
+K_FEATURE_MASK = 0xff
+K_FEATURE_MASK_OBSTRUCTION = 0x7f
+K_WALL = 0x01
+K_ROCK = 0x02
+K_TREE = 0x11
+K_STATIC = 0x100 -- "statics" (buildings, generally)
 K_STATIC_OBSTRUCTION = 0x200
 K_FOG_OF_WAR = 0x400
-K_STATIC_ALL = bit.bor(K_STATIC, K_STATIC_OBSTRUCTION)
-K_OBSTRUCTION = bit.bor(K_WALL_MASK_OBSTRUCTION, K_STATIC_OBSTRUCTION)
-K_NO_SHADOWS = 0
+K_VARIANT = 0x800 -- for randomness.
 
+-- combination masks
+K_STATIC_ALL = bit.bor(K_STATIC, K_STATIC_OBSTRUCTION)
+K_OBSTRUCTION = bit.bor(K_FEATURE_MASK_OBSTRUCTION, K_STATIC_OBSTRUCTION)
+
+-- board event types
 K_BOARD_EVENT_SET = 0
 K_BOARD_EVENT_RESIZE_BEGIN = 1
 K_BOARD_EVENT_RESIZE_END = 2
 
-g_board_observers = {}
+local g_board_observers = {}
+
+require("src.board_generate")
 
 function board_init()
   g_state.board = {
@@ -26,7 +35,9 @@ function board_init()
 
   g_board_observers = {}
 
-  board_update_bounds(0, 40, 0, 24)
+  board_generate_init()
+
+  board_update_bounds(0, g_state.initial_board_width, 0, g_state.initial_board_height)
 end
 
 function board_emit_event(opts)
@@ -35,9 +46,9 @@ function board_emit_event(opts)
   end
 end
 
--- new tile added to board
-function board_generate_tile(x, y)
-  return K_FOG_OF_WAR
+function board_tile_is_border(x, y)
+  local board = g_state.board
+  return x == board.left or x + 1 == board.right or y == board.top or y + 1 == board.bottom
 end
 
 -- sets new bounds for the board, adding or removing tiles as needed.

@@ -1,8 +1,8 @@
 function svy_init()
   -- add castle.
   local castle_id = static_emplace({
-    x = 14,
-    y = 12,
+    x = g_state.spawnx,
+    y = g_state.spawny,
     w = 2,
     h = 2,
     image = g_images.castle,
@@ -69,7 +69,8 @@ function svy_position_is_at_goal(x, y)
 end
 
 function svy_goal_reachable()
-  local path, length = svy_pathfind_to_goal(0, 0)
+  local x, y = board_get_source()
+  local path, length = svy_pathfind_to_goal(x, y)
   return path ~= nil
 end
 

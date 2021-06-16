@@ -1,6 +1,12 @@
 -- allow debugging
 if arg[#arg] == "vsc_debug" then require("lldebugger").start() end
 
+-- operating system
+g_os = love.system.getOS()
+
+-- paranoia / future-proofing
+g_is_web = g_os:lower() == "web" or g_os:lower() == "browser" or g_os:lower() == "firefox" or g_os:lower() == "chrome" or g_os:lower() == "emscripten"
+
 -- match library
 if not bit then
   if bit32 then
@@ -23,6 +29,9 @@ g_images = {}
 g_shaders = {}
 
 require("src.util")
+
+g_debug_mode = table.contains(arg, "debug") or table.contains(arg, "--debug")
+
 require("src.misc")
 require("src.input")
 require("src.pathfinding")
@@ -44,8 +53,12 @@ function init_state()
     spawn_progress = 0.5,
     spawn_timer = 0,
     game_over = false,
-    game_over_timer = 0
+    game_over_timer = 0,
+    initial_board_width = 40,
+    initial_board_height = 24,
   }
+  g_state.spawnx = math.random(6, g_state.initial_board_width - 7)
+  g_state.spawny = math.random(6, g_state.initial_board_height - 7)
   pf_init()
   board_init()
   static_init()
@@ -58,7 +71,9 @@ function init_state()
 end
 
 function love.load()
-  math.randomseed(os.time())
+  local seed = math.floor(math.abs(os.time()))
+  print("seed: " .. HX(seed, 8))
+  math.randomseed(seed)
   -- gain some randomness by throwing out some random numbers.
   for i = 1,100 + math.random(100) do
     math.random()
@@ -76,6 +91,7 @@ function love.load()
   g_images.blood = new_sprite("resources/images/pd/hv/blood.png", 20, 20, 10, 10)
   g_images.muzzle = new_sprite("resources/images/pd/hv/Muzzle.png", 20, 20, 10, 15)
   g_images.wall = new_sprite("resources/images/pd/wyrmsun-cc0/goblin_wall.png", 16, 16)
+  g_images.rock = new_sprite("resources/images/pd/wyrmsun-cc0/rock.png", 32, 32)
   g_images.fog_of_war = new_sprite("resources/images/f/fog_of_war.png", 16, 16)
   g_images.blocks = {}
   for i, color in ipairs(k_block_colors) do
@@ -182,10 +198,12 @@ function love.update(dt)
       while g_state.spawn_progress >= 1 do
         g_state.spawn_progress = g_state.spawn_progress - 1
         local sx, sy = board_perimeter_location(math.random(board_perimeter()))
-        unit_emplace(g_images.goblin, sx, sy, {
-          hp = tern(g_state.spawn_timer < 30, 1, 0.5 + g_state.spawn_timer / 30),
-          bounty = tern(g_state.spawn_rate > 1.2, 1, 2)
-        })
+        if svy_pathfind_to_goal(sx, sy) then
+          unit_emplace(g_images.goblin, sx, sy, {
+            hp = tern(g_state.spawn_timer < 30, 1, 0.5 + g_state.spawn_timer / 30),
+            bounty = tern(g_state.spawn_rate > 1.2, 1, 2)
+          })
+        end
       end
     end
     effects_update(dt)

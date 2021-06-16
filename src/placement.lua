@@ -119,6 +119,26 @@ function placement_placable()
     return false, 1
   end
 
+  -- check for being completely in fog of war (unless debugging)
+  if not g_debug_mode then
+    if board_test_collides({
+      x=g_state.placement.x,
+      y=g_state.placement.y,
+      grid=g_state.placement.grid,
+      mask=K_FOG_OF_WAR,
+      all=true
+    }) then
+      return false,  4
+    end
+  end
+
+  -- check for touching the border
+  for y, x, v in array_2d_iterate(g_state.placement.grid, 0) do
+    if v ~= 0 and board_tile_is_border(x + g_state.placement.x, y + g_state.placement.y) then
+      return false, 4
+    end
+  end
+
   -- check for direct collision with any other obstruction
   if not board_test_free({
     x=g_state.placement.x,
@@ -127,17 +147,6 @@ function placement_placable()
     mask=K_OBSTRUCTION
   }) then
     return false, 2
-  end
-
-  -- check for being completely in fog of war
-  if board_test_collides({
-    x=g_state.placement.x,
-    y=g_state.placement.y,
-    grid=g_state.placement.grid,
-    mask=K_FOG_OF_WAR,
-    all=true
-  }) then
-    return false,  4
   end
 
   -- check that path would not be interrupted by placing this.
@@ -152,9 +161,9 @@ function next_placement(is_first_placement)
     g_state.placement_idx = 0
     g_state.placement_permutation = shuffle(iota(#K_PLACEMENTS))
 
-    -- first placement: guarantee that a square block is in the first three
+    -- first placement: guarantee that a square block is in either second or third spot.
     -- (this ensures a turret will be placed)
-    table.swap(g_state.placement_permutation, math.random(3), indexof(g_state.placement_permutation, 2))
+    table.swap(g_state.placement_permutation, math.random(2, 3), indexof(g_state.placement_permutation, 2))
   end
   g_state.placement_count = g_state.placement_count + 1
   local idx = g_state.placement_idx
@@ -251,13 +260,26 @@ end
 
 function placement_emplace()
   local placement = g_state.placement
+
+  -- place wall
   local success = board_emplace({
     x = placement.x,
     y = placement.y,
     grid = placement.grid,
     cmask = K_OBSTRUCTION,
-    wmask = K_WALL_MASK,
-    value = placement.color
+    wmask = K_FEATURE_MASK,
+    value = K_WALL
+  })
+  assert(success)
+
+  -- remove fog
+  success = board_emplace({
+    x = placement.x,
+    y = placement.y,
+    grid = placement.grid,
+    force = true,
+    mask = K_FOG_OF_WAR,
+    value = 0
   })
   assert(success)
 

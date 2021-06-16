@@ -164,6 +164,10 @@ function indexof(t, x)
   return nil
 end
 
+function table.contains(t, x)
+  return not not indexof(t, x)
+end
+
 -- width and height of 2d arrays
 function height2d(t)
   return #t
