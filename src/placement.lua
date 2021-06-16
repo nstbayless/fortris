@@ -322,11 +322,11 @@ function placement_emplace()
   })
   assert(success)
 
-  -- remove fog
+  -- remove shroud
   success = board_emplace({
-    x = placement.x,
-    y = placement.y,
-    grid = placement.grid,
+    x = placement.x - 1,
+    y = placement.y - 1,
+    grid = array_2d_grow(placement.grid),
     force = true,
     mask = K_FOG_OF_WAR,
     value = 0
@@ -381,7 +381,7 @@ function update_placement(dx, dy, dr, dt)
 
     -- clamp
     proposed_placement.x = math.clamp(proposed_placement.x, g_state.board.left, g_state.board.right - 1)
-    proposed_placement.x = math.clamp(proposed_placement.x, g_state.board.left, g_state.board.right - 1)
+    proposed_placement.y = math.clamp(proposed_placement.y, g_state.board.top, g_state.board.bottom - 1)
 
     -- rotate
     rotate_placement(dr, proposed_placement)

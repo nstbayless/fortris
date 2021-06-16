@@ -34,7 +34,7 @@ end
 
 -- grows out the nonzero region by one, and also pushes out bounds by one.
 function array_2d_grow(arr)
-  local o = make_2d_array(width2d(arr), height2d(arr))
+  local o = make_2d_array(width2d(arr) + 2, height2d(arr) + 2)
   for y, x, v in array_2d_iterate(arr) do
     if v ~= 0 then
       for ox = x,x+2 do
