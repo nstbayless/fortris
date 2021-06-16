@@ -36,7 +36,9 @@ local function has_rock_base(x, y)
     return false
   end
 
-  return simplex.Noise2D(x / 7 + g_state.generate.seedx, g_state.generate.seedy + y / 7) > 0.3
+  local scale = 10
+  local margin = 0.5
+  return simplex.Noise2D(x / scale + g_state.generate.seedx, g_state.generate.seedy + y / scale) > margin
 end
 
 -- prunes some rocks if they don't have enough neighbours or would end up in a forbidden configuration.
