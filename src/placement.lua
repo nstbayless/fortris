@@ -118,7 +118,7 @@ K_PLACEMENT_REASON_SHROUD = 4
 K_PLACEMENT_REASON_BORDER = 5
 
 K_PLACEMENT_REASON_TEXT = {
-  "Funds Required",
+  "$" .. tostring(K_PLACEMENT_COST) .. " Required",
   "Obstructed",
   "Blocking!",
   "Shroud",
