@@ -91,3 +91,26 @@ end
 function dpi()
   return love.graphics.getDPIScale()
 end
+
+local g_text_cache = {}
+local g_text_cache_size = 0
+
+function get_cached_text(font, string)
+
+  -- brutal cache eviction policy
+  -- TODO: improve
+  if g_text_cache_size >= 1000 then
+    g_text_cache_size = 0
+    g_text_cache = {}
+  end
+
+  local fontkey = tostring(font)
+  if not g_text_cache[fontkey] then
+    g_text_cache[fontkey] = {}
+  end
+  if not g_text_cache[fontkey][string] then
+    g_text_cache_size = g_text_cache_size + 1
+    g_text_cache[fontkey][string] = love.graphics.newText(font, string)
+  end
+  return g_text_cache[fontkey][string]
+end

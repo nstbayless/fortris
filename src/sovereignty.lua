@@ -83,7 +83,11 @@ function svy_draw_overlay()
   if g_state.game_over then
     s = "Game Over. Press Space to restart."
   end
-  local text = love.graphics.newText(g_font, s)
+
+  if g_state.spawn_timer <= 2 or g_state.game_over_timer >= 7.5 then
+    s = s .. "\n" .. k_version
+  end
+  local text = get_cached_text(g_font, s)
   love.graphics.draw(text, 0, 0)
   love.graphics.setColor(1, 1, 1)
 end

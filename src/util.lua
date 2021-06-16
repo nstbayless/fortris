@@ -12,6 +12,44 @@ function table.clone(orig)
   return copy
 end
 
+function array_2d_get_bbox(arr, base_idx)
+  local miny = nil
+  local minx = nil
+  local maxy = nil
+  local maxx = nil
+  for y, x, v in array_2d_iterate(arr, base_idx) do
+    if v ~= 0 then
+      miny = math.min(y, miny)
+      maxy = math.max(y, maxy)
+      minx = math.min(x, minx)
+      maxx = math.max(x, maxx)
+    end
+  end
+  if minx then
+    return minx, miny, maxx + 1, maxy + 1
+  else
+    return nil, nil, nil, nil
+  end
+end
+
+-- grows out the nonzero region by one, and also pushes out bounds by one.
+function array_2d_grow(arr)
+  local o = make_2d_array(width2d(arr), height2d(arr))
+  for y, x, v in array_2d_iterate(arr) do
+    if v ~= 0 then
+      for ox = x,x+2 do
+        for oy = y,y+2 do
+          if o[oy][ox] == 0 then
+            o[oy][ox] =  v
+          end
+        end
+      end
+    end
+  end
+
+  return o
+end
+
 function rotate_2d_array_cw(arr)
   local a = {}
   local h = #arr
@@ -186,6 +224,7 @@ end
 
 -- creates a [y][x]-indexed 2d array.
 function make_2d_array(w, h, v)
+  v = v or 0
   local a = {}
   for y = 1,h do
     a[y] = {}

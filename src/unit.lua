@@ -123,12 +123,12 @@ end
 function unit_splatter(id)
   local unit = unit_get(id)
   if unit then
+    local gx, gy = unit_get_precise_grid_position(id)
     for i = 1,7 + math.random(5) do
       local effect = {
         sprite = g_images.blood,
         duration = 0.3 + math.frandom(0.3)
       }
-      local gx, gy = unit_get_precise_grid_position(id)
       local dx, dy = math.frandom(-0.7, 0.7), math.frandom(-0.7, 0.7)
       effects_create({
         x = k_dim_x * (dy + gx),
@@ -140,6 +140,10 @@ function unit_splatter(id)
         yspeed = dy * k_dim_y * 2 + math.frandom(-1, 1) * k_dim_y,
       })
     end
+
+    local squash_bounty = math.ceil(unit.bounty * 1.5)
+    effects_create_text(gx * k_dim_x, gy * k_dim_y, "$" .. tostring(squash_bounty))
+    svy_gain_bounty(squash_bounty)
     unit_remove(id)
   end
 end
@@ -186,6 +190,7 @@ function unit_apply_damage(id, amount, effect)
       -- death
       unit.health = 0
       svy_gain_bounty(unit.bounty)
+      effects_create_text(px, py, "$" .. tostring(unit.bounty))
       unit_remove(id)
     end
   end

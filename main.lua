@@ -21,6 +21,7 @@ end
 
 k_dim_x = 32
 k_dim_y = 32
+k_version = "Fortris v0.4"
 
 k_block_colors = {"blue", "darkgray", "gray", "green", "lightblue", "orange", "yellow", "pink", "purple", "red", "red2", "white"}
 
@@ -82,6 +83,7 @@ function love.load()
 
   love.graphics.setDefaultFilter("linear", "nearest")
   g_font = love.graphics.newFont(24, "normal", dpi())
+  g_font_effect = love.graphics.newFont(15, "normal", dpi())
   g_images.grass = love.graphics.newImage("resources/images/f/checkered-grass.png")
   g_images.castle = love.graphics.newImage("resources/images/pd/wyrmsun-cc0/town_hall.png")
   g_images.goblin = new_sprite("resources/images/cl/wyrmsun-gpl/goblin_spearman.png", 72, 72, 72/2, 72/2 + 5)
@@ -188,7 +190,7 @@ function love.update(dt)
   dr = ibool(key_pressed("s")) - ibool(key_pressed("a"))
 
   if dt > 0 then
-    update_placement(dx, dy, dr)
+    update_placement(dx, dy, dr, dt)
 
     -- spawning monsters
     if g_state.placement_count >= 2 then
@@ -197,12 +199,15 @@ function love.update(dt)
       g_state.spawn_progress = g_state.spawn_progress + dt * g_state.spawn_rate
       while g_state.spawn_progress >= 1 do
         g_state.spawn_progress = g_state.spawn_progress - 1
-        local sx, sy = board_perimeter_location(math.random(board_perimeter()))
-        if svy_pathfind_to_goal(sx, sy) then
-          unit_emplace(g_images.goblin, sx, sy, {
-            hp = tern(g_state.spawn_timer < 30, 1, 0.5 + g_state.spawn_timer / 30),
-            bounty = tern(g_state.spawn_rate > 1.2, 1, 2)
-          })
+        for _ = 1,30 do
+          local sx, sy = board_perimeter_location(math.random(board_perimeter()))
+          if svy_pathfind_to_goal(sx, sy) then
+            unit_emplace(g_images.goblin, sx, sy, {
+              hp = tern(g_state.spawn_timer < 30, 1, 0.5 + g_state.spawn_timer / 30),
+              bounty = tern(g_state.spawn_rate > 1.2, 1, 2)
+            })
+            break
+          end
         end
       end
     end
