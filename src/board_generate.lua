@@ -19,9 +19,21 @@ function board_generate_tile_basic(x, y)
   return v
 end
 
--- where enemies spawn
+-- where enemies must be able to spawn
 function board_get_source()
-  return g_state.spawnx, g_state.board.top
+  -- default values
+  g_state.sourcex = g_state.sourcex or g_state.spawnx
+  g_state.sourcey = g_state.sourcey or g_state.board.top
+  return g_state.sourcex, g_state.sourcey
+end
+
+-- change where enemies must be able to spawn
+function board_set_source(x, y)
+  g_state.sourcex, g_state.sourcey = x, y
+
+  -- ensure source location is on border and can reach the goal.
+  assert(board_tile_is_border(x, y))
+  assert(svy_pathfind_to_goal(x, y))
 end
 
 -- what terrain feature does the given coordinate get?

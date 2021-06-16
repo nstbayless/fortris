@@ -102,32 +102,40 @@ function board_update_bounds(left, right, top, bottom)
     end
   end
 
-   -- update bounds
-   board.left = left
-   board.right = right
-   board.top = top
-   board.bottom = bottom
+  -- update bounds
+  board.left = left
+  board.right = right
+  board.top = top
+  board.bottom = bottom
 
-   pf_reset(right - left, bottom - top)
+  pf_reset(right - left, bottom - top)
 
-   -- notify observers of new tiles
-   for _, update in ipairs(updates) do
+  -- notify observers of new tiles
+  for _, update in ipairs(updates) do
     -- TODO: combine updates into a single grid...
     board_emit_event({
       etype = K_BOARD_EVENT_SET,
       during_board_resize = true,
       x = update[1], y = update[2], grid = {{1}}, mask = bit.bnot(0), value = update[3],
     })
-   end
+  end
 
-   -- notify observers (that we're done now.)
-   board_emit_event({
+  -- notify observers (that we're done now.)
+  board_emit_event({
     etype = K_BOARD_EVENT_RESIZE_END,
     left = left, right = right, top = top, bottom = bottom,
     pleft = pleft, pright = pright, ptop = ptop, pbottom = pbottom
   })
 
-   board_refresh_pathing()
+  -- assert board perimeter still works
+  if g_debug_mode then
+    for i = 0,board_perimeter() - 1 do
+      local x, y = board_perimeter_location(i)
+      assert(board_location_perimeter(x, y) == i)
+    end
+  end
+
+  board_refresh_pathing()
 end
 
 function board_iterate(board)
@@ -164,23 +172,54 @@ end
 -- returns x, y location of perimeter location
 function board_perimeter_location(i)
   i = i % board_perimeter()
+  local board = g_state.board
   if i < board_width() then
-    return i, 0
+    return i, board.top
   end
-  i = i - board_width()
-  if i < board_height() - 2  then
-    return board_width() - 1, i + 1
+  i = i - board_width() + 1
+  if i < board_height() then
+    return board.right - 1, board.top + i
   end
-  i = i - board_height() + 2
-  if i < board_width()  then
-    return board_width() - i - 1, board_height() - 1
+  i = i - board_height() + 1
+  if i < board_width() then
+    return board.right - i - 1, board.bottom - 1
   end
-  i = i - board_width()
-  if i < board_height() - 2 then
-    return 0, board_height() - 1 - i
+  i = i - board_width() + 1
+  if i < board_height() then
+    return board.left, board.bottom - i - 1
   end
+
+  if g_debug_mode then
+    assert(false)
+  end
+
   -- paranoia
-  return 0, 0
+  return board.left, board.top
+end
+
+-- returns perimeter index of x, y location
+function board_location_perimeter(x, y)
+  local board = g_state.board
+  assert(board_tile_is_border(x, y))
+  if y == board.top then
+    return x
+  end
+  if x == board.right - 1 then
+    return board_width() + y - 1
+  end
+  if y == board.bottom - 1 then
+    return board_width() + board_height() + (board_width() - x - 1) - 2
+  end
+  if x == board.left then
+    return 2 * board_width() + board_height() + (board_height() - y - 1) - 3
+  end
+
+  if g_debug_mode then
+    assert(false)
+  end
+
+  -- paranoia
+  return 0
 end
 
 function board_draw_letterbox()

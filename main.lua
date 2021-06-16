@@ -58,6 +58,8 @@ function init_state()
   }
   g_state.spawnx = math.random(6, g_state.initial_board_width - 7)
   g_state.spawny = math.random(6, g_state.initial_board_height - 7)
+  g_state.sourcex = nil -- can be filled in later by generator.
+  g_state.sourcey = nil -- can be filled in later by generator.
   pf_init()
   board_init()
   static_init()

@@ -356,9 +356,23 @@ function shuffle(a)
   return shuffled
 end
 
-function iota(x)
+function shuffle_and_idxs(a)
+  local shuffled = table.clone(a)
+  local idxs = {}
+  for i, v in ipairs(a) do
+    local swapidx = math.random(i, #shuffled)
+    table.swap(i, swapidx)
+    idxs[v] = swapidx
+  end
+  return shuffled, idxs
+end
+
+function iota(x, y)
+  if not y then
+    x, y = 1, x
+  end
   local a = {}
-  for i = 1,x do
+  for i = x,y do
     a[i] = i
   end
   return a

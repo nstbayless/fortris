@@ -15,7 +15,8 @@
       "args": 
       [
           "${workspaceFolder}",
-          "vsc_debug"
+          "--debug",
+          "vsc_debug",
       ],
     },
     {

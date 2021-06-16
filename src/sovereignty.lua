@@ -14,7 +14,7 @@ function svy_init()
     color = "purple",
     building_idxs = {castle_id},
     protectee_idxs = {castle_id},
-    money = 36,
+    money = tern(g_debug_mode, 300, 36),
     hp = 10,
   }
 end
@@ -68,9 +68,83 @@ function svy_position_is_at_goal(x, y)
   return false
 end
 
+-- checks if position is reachable
+-- this function can change the 'preferred' source location,
+-- which is only intended as a cached value anyway (for comparison in this function only).
 function svy_goal_reachable()
+  local svy = g_state.svy
+
   local x, y = board_get_source()
-  local path, length = svy_pathfind_to_goal(x, y)
+  local init_x, init_y = x, y
+  assert(x and y)
+  local source_changed = false
+
+  -- this will fail if map expansion becomes enabled.
+  -- think very carefully about how to ensure a reachable border tile when expanding the map.
+  assert(board_tile_is_border(x, y))
+
+  -- if the first position we try fails, scan additional positions.
+  -- TODO: optimize. Check only particular regions...
+  local scan_order = shuffle(iota(0, board_perimeter() - 1))
+  do
+    local perimeter_idx = board_location_perimeter(x, y)
+    local startidx = indexof(scan_order, perimeter_idx)
+    if perimeter_idx and startidx ~= nil then -- realistically, we should assert these. But crash-paranoia...
+      table.swap(scan_order, 1, startidx) -- ensure we first check the expected location.
+
+      -- validate that perimeter-location matches location-perimeter
+      if g_debug_mode then
+        local _x, _y = board_perimeter_location(perimeter_idx)
+        assert(_x == x and _y == y)
+      end
+    elseif g_debug_mode then
+      assert(false)
+    end
+  end
+
+  local checked = {}
+
+  -- find path
+  local path, length = nil, nil
+  for _, i in ipairs(scan_order) do
+    if not checked[i] then
+      x, y = board_perimeter_location(i)
+      if bit.band(board_get_value(x, y, 0), K_IMPATHABLE) == 0 then
+        path, length = svy_pathfind_to_goal(x, y)
+      end
+      if path then
+        break
+      else
+        source_changed = true
+
+        -- mark off as many values as we can as impathable.
+        for d = -1,1 do
+          if d ~=0 then
+            for j = 0, 100 do
+              local _x, _y = board_perimeter_location(i + j * d)
+              if g_debug_mode and j == 0 then
+                assert(_x == x and _y == y)
+              end
+              if bit.band(board_get_value(_x, _y, 0), K_IMPATHABLE) == 0 then
+                -- technically we don't need to recompute location-perimeter, we could just use arithmetic.
+                -- this is paranoia.
+                checked[board_location_perimeter(_x, _y)] = true
+              else
+                break
+              end
+            end
+          end
+        end
+
+      end
+    end
+  end
+
+  -- update source
+  if path ~= nil and source_changed then
+    print("source updated. ", init_x, init_y, "->", x, y)
+    board_set_source(x, y)
+  end
   return path ~= nil
 end
 
