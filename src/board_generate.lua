@@ -100,9 +100,9 @@ function board_generate_tile(x, y)
 
   -- variants
   if math.random() > 0.4 then
-    --v = bit.bor(v, K_VARIANT)
-  elseif t == K_TREE and math.random() > 0.6 then
-    --v = bit.bor(v, K_VARIANT2)
+    v = bit.bor(v, K_VARIANT)
+  elseif t == K_TREE and math.random() > 0.98 then
+    v = bit.bor(v, K_VARIANT2)
   end
   return v
 end

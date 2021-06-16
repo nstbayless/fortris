@@ -16,7 +16,7 @@ function bgfx_init()
     mask = K_ROCK,
     subtile_fn = function(x, y)
       assert(x and y)
-      return rock_get_subtile(x, y, K_ROCK, true, K_ROCK_IDX)
+      return rock_get_subtile(x, y, K_ROCK, true, K_ROCK_IDX, 2)
     end
   })
   bgfx_add("tree", {
@@ -24,7 +24,7 @@ function bgfx_init()
     mask = K_TREE,
     subtile_fn = function(x, y)
       assert(x and y)
-      return rock_get_subtile(x, y, K_TREE, true, K_TREE_IDX)
+      return rock_get_subtile(x, y, K_TREE, true, K_TREE_IDX, 3)
     end
   })
   bgfx_add("wall", {

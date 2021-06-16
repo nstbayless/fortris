@@ -148,9 +148,8 @@ function rock_get_subtile(base_x, base_y, mask, edges_are_rocks, idxs, variant_m
   end
 
   -- variant
-  if bit.band(d(board_get_value(base_x, base_y), 0), K_VARIANT) ~= 0 then
-    c = bit.bor(c, bit.lshift(1, idx))
-  end
+  local variant = bit.rshift(bit.band(d(board_get_value(base_x, base_y), 0), K_VARIANTS), bit.blog(K_VARIANTS)) % math.max(variant_max or 1, 1)
+  c = c + variant * 0x200
 
   return idxs[c]
 end
