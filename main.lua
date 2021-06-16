@@ -176,6 +176,10 @@ function love.draw()
 end
 
 function love.update(dt)
+
+  -- cap if extreme lag
+  dt = math.min(dt, 1)
+
   if g_state.game_over then
     g_state.game_over_timer = g_state.game_over_timer + dt
 
