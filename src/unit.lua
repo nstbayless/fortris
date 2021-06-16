@@ -27,12 +27,13 @@ end
 -- repath any units whose current path intersects the update.
 function unit_on_board_update(det)
   if det.etype == K_BOARD_EVENT_SET then
-    if false then
+    if false then -- TODO -- enable this.
       local base_x = det.x
       local base_y = det.y
       local grid = det.grid
       for id, unit in pairs(g_state.units) do
         if unit.path and unit_path_intersects_grid(unit.path, base_x, base_y, grid) then
+          unit.path = nil
           unit_repath(id)
         end
       end
@@ -108,6 +109,7 @@ end
 
 function unit_repath_all()
   for id, unit in pairs(g_state.units) do
+    unit.path = nil
     unit_repath(id)
   end
 end
@@ -219,6 +221,29 @@ function unit_update(id, dt)
   -- empty paths are not allowed.
   if unit.path ~= nil and #unit.path == 0 then
     unit.path = nil
+  end
+
+  -- wander if no path found and not at goal.
+  if unit.path == nil and unit.move_distance >= 0 and not svy_position_is_at_goal(unit.x, unit.y) then
+    local blocking_grid = make_2d_array(3, 3, 0)
+    for y, x in array_2d_iterate(blocking_grid, 1) do
+      if bit.band(board_get_value(x + unit.x - 2, y + unit.y - 2, K_IMPATHABLE), K_IMPATHABLE) ~= 0 then
+        blocking_grid[y][x] = 1
+      end
+    end
+
+    for _, i in ipairs(shuffle(iota(0, 8))) do
+      local x = (i % 3) + 1
+      local y = math.floor(i / 3) + 1
+      if x ~= 2 or y ~= 2 then
+        print(i, x, y, blocking_grid[y][x])
+        if blocking_grid[y][x] == 0 then
+          unit.path = {{x = x + unit.x - 2, y = y + unit.y - 2}}
+          print("set path")
+          break
+        end
+      end
+    end
   end
 
   -- walk along path
