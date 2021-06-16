@@ -165,7 +165,7 @@ function placement_placable()
   end
 
   -- check that path would not be interrupted by placing this.
-  board_push_temporary_change_from_grid(placement.x, placement.y, placement.grid, K_OBSTRUCTION)
+  board_push_temporary_change_from_grid(placement.x, placement.y, placement.grid, K_IMPATHABLE)
   local reachable = svy_goal_reachable()
   board_pop_temporary_change()
   return reachable, tern(reachable, 0, K_PLACEMENT_REASON_BLOCKING)

@@ -1,17 +1,20 @@
 -- board tile bits
-K_FEATURE_MASK = 0xff
-K_FEATURE_MASK_OBSTRUCTION = 0x7f
 K_WALL = 0x01
 K_ROCK = 0x02
-K_TREE = 0x11
+K_TREE = 0x04
 K_STATIC = 0x100 -- "statics" (buildings, generally)
 K_STATIC_OBSTRUCTION = 0x200
 K_FOG_OF_WAR = 0x400
-K_VARIANT = 0x800 -- for randomness.
+K_VARIANT = 0x800 -- for display randomness.
+K_VARIANT2 = 0x1000 -- for extra display randomness.
 
 -- combination masks
+K_TILE_EMPTY = 0
+K_FEATURE_MASK = 0xff
+K_FEATURE_MASK_OBSTRUCTION = bit.bor(K_WALL, K_ROCK)
 K_STATIC_ALL = bit.bor(K_STATIC, K_STATIC_OBSTRUCTION)
 K_OBSTRUCTION = bit.bor(K_FEATURE_MASK_OBSTRUCTION, K_STATIC_OBSTRUCTION)
+K_IMPATHABLE = bit.bor(K_OBSTRUCTION, K_TREE)
 
 -- board event types
 K_BOARD_EVENT_SET = 0
@@ -361,7 +364,7 @@ function board_refresh_pathing()
   local grid = pf_get_grid_reference()
   assert(grid ~= nil)
   for y, x, v in board_iterate(board) do
-    if bit.band(v, K_OBSTRUCTION) ~= 0 then
+    if bit.band(v, K_IMPATHABLE) ~= 0 then
       grid[y - board.top + 1][x - board.left + 1] = 1
     else
       grid[y - board.top + 1][x - board.left + 1] = 0

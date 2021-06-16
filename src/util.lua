@@ -368,3 +368,25 @@ end
 function table.swap(a, i1, i2)
   a[i1], a[i2] = a[i2], a[i1]
 end
+
+-- gets index of first nonzero bit
+-- returns 32 if all bits are clear.
+function bit.blog(a)
+  for i = 0,31 do
+    if bit.band(a, bit.lshift(1, i)) ~= 0 then
+      return i
+    end
+  end
+  return 32
+end
+
+-- gets index of first zero bit
+-- returns 32 if all bits are set.
+function bit.nblog(a)
+  for i = 0,31 do
+    if bit.band(a, bit.lshift(1, i)) == 0 then
+      return i
+    end
+  end
+  return 32
+end

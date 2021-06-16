@@ -2,6 +2,7 @@
 
 require("src.bgfx.bgfx_wall")
 require("src.bgfx.bgfx_rock")
+require("src.bgfx.bgfx_tree")
 
 local g_bgfx = {}
 
@@ -15,7 +16,15 @@ function bgfx_init()
     mask = K_ROCK,
     subtile_fn = function(x, y)
       assert(x and y)
-      return rock_get_subtile(x, y, K_ROCK, true)
+      return rock_get_subtile(x, y, K_ROCK, true, K_ROCK_IDX)
+    end
+  })
+  bgfx_add("tree", {
+    sprite = g_images.tree,
+    mask = K_TREE,
+    subtile_fn = function(x, y)
+      assert(x and y)
+      return rock_get_subtile(x, y, K_TREE, true, K_TREE_IDX)
     end
   })
   bgfx_add("wall", {
@@ -149,6 +158,9 @@ function board_draw()
   love.graphics.draw(g_bgfx["wall"].sprite_batch)
   if g_bgfx.rock then 
     love.graphics.draw(g_bgfx["rock"].sprite_batch)
+  end
+  if g_bgfx.tree then 
+    love.graphics.draw(g_bgfx["tree"].sprite_batch)
   end
 end
 

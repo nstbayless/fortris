@@ -1,37 +1,13 @@
+local s = require("src.bgfx.bgfx_util")
+local s, sr, set_s_array = s.s, s.sr, s.set_s_array
+
 -- rock image indices
 -- ordered first by x (left, middle, right) then by y (top, centre, bottom), but skipping (middle, centre).
-local K_ROCK_IDX = { }
+K_ROCK_IDX = { }
 
 -- generate table...
 do
-  local function rindex(tl, t, tr, l, c, r, bl, b, br, v)
-    return tl + 2 * t + 4 * tr + 8 * l + 0x10 * c + 0x20 * r + 0x40 * bl + 0x80 * b + 0x100 * br + 0x200 * v
-  end
-
-  local function s(value, ...)
-    local a = {...}
-    assert(#a == 10)
-    for i, v in ipairs(a) do
-      if v == false then
-        a[i] = 0
-        s(value, unpack(a))
-        a[i] = 1
-        s(value, unpack(a))
-        return
-      end
-    end
-    K_ROCK_IDX[rindex(...)] = value
-  end
-
-  local function sr(a0, a1, a2, a3, tl, t, tr, l, c, r, bl, b, br, v)
-    local a = {a0, a1, a2, a3}
-    for i = 1,4 do
-      s(a[i], tl, t, tr, l, c, r, bl, b, br, v)
-
-      -- rotate
-      tl, t, tr, r, br, b, bl, l = bl, l, tl, t, tr, r, br, b
-    end
-  end
+  set_s_array(K_ROCK_IDX)
 
   -- default (centres are all active)
   for i = 0,0x400 do
@@ -67,18 +43,6 @@ do
       1, 1, 1,
       1, 1, 1, v)
 
-    -- edge-inner (chiral A) -----
-    sr(0x2a, 0x2d, 0x3b, 0x3c,
-      i, 0, i,
-      1, 1, 1,
-      1, 1, 0, v)
-
-    -- edge-inner (chiral B) -----
-    sr(0x2b, 0x3d, 0x3a, 0x2c,
-      i, 0, i,
-      1, 1, 1,
-      0, 1, 1, v)
-
     -- double corners -------------
     s(0x0e + v,
       1, 1, 0,
@@ -88,6 +52,20 @@ do
       0, 1, 1,
       1, 1, 1,
       1, 1, 0, v)
+
+    ------------------------------- [full-thin connectors]
+
+    -- edge-inner (chiral A) -----
+    sr(0x2a, 0x2d, 0x3b, 0x3c,
+    i, 0, i,
+    1, 1, 1,
+    1, 1, 0, v)
+
+    -- edge-inner (chiral B) -----
+    sr(0x2b, 0x3d, 0x3a, 0x2c,
+      i, 0, i,
+      1, 1, 1,
+      0, 1, 1, v)
 
     -- T-double corners -----------
     sr(0x55, 0x45, 0x46, 0x56,
@@ -100,6 +78,8 @@ do
       1, 1, 0,
       1, 1, 1,
       0, 1, 0, v)
+
+    ------------------------------- [thin]
     
     -- lines ----------------------
     s(0x40,
@@ -134,12 +114,19 @@ do
       0, 1, 0,
       1, 1, 1,
       0, 1, 0, v)
+
+     -- Island -------------
+     s(0x20,
+     i, 0, i,
+     0, 1, 0,
+     i, 0, i, v)
   end
 end
 
 
+-- todo: move this to another file, since trees also use this.
 -- returns one of four corner tiles for the wall at the given idx
-function rock_get_subtile(base_x, base_y, mask, edges_are_rocks)
+function rock_get_subtile(base_x, base_y, mask, edges_are_rocks, idxs, variant_max)
   local c = 0 -- "context" a bitfield of all the surrounding tiles.
 
   -- centre
@@ -162,8 +149,8 @@ function rock_get_subtile(base_x, base_y, mask, edges_are_rocks)
 
   -- variant
   if bit.band(d(board_get_value(base_x, base_y), 0), K_VARIANT) ~= 0 then
-    --c = bit.bor(c, bit.lshift(1, idx))
+    c = bit.bor(c, bit.lshift(1, idx))
   end
 
-  return K_ROCK_IDX[c]
+  return idxs[c]
 end

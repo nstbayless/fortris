@@ -30,9 +30,7 @@ g_images = {}
 g_shaders = {}
 
 require("src.util")
-
-g_debug_mode = table.contains(arg, "debug") or table.contains(arg, "--debug")
-
+require("src.clargs")
 require("src.misc")
 require("src.input")
 require("src.pathfinding")
@@ -72,9 +70,13 @@ function init_state()
 end
 
 function love.load()
-  local seed = math.floor(math.abs(os.time()))
-  print("seed: " .. HX(seed, 8))
-  math.randomseed(seed)
+  if g_seed == nil then
+    g_seed = math.floor(math.abs(os.time()))
+    print("seed: " .. HX(g_seed, 8))
+  else
+    print("seed: " .. HX(g_seed, 8) .. " (set by user)")
+  end
+  math.randomseed(g_seed)
   -- gain some randomness by throwing out some random numbers.
   for i = 1,100 + math.random(100) do
     math.random()
@@ -94,6 +96,7 @@ function love.load()
   g_images.muzzle = new_sprite("resources/images/pd/hv/Muzzle.png", 20, 20, 10, 15)
   g_images.wall = new_sprite("resources/images/pd/wyrmsun-cc0/goblin_wall.png", 16, 16)
   g_images.rock = new_sprite("resources/images/pd/wyrmsun-cc0/rock.png", 32, 32)
+  g_images.tree = new_sprite("resources/images/pd/wyrmsun-cc0/tree.png", 32, 32)
   g_images.fog_of_war = new_sprite("resources/images/f/fog_of_war.png", 16, 16)
   g_images.blocks = {}
   for i, color in ipairs(k_block_colors) do
@@ -204,7 +207,7 @@ function love.update(dt)
           if svy_pathfind_to_goal(sx, sy) then
             unit_emplace(g_images.goblin, sx, sy, {
               hp = tern(g_state.spawn_timer < 30, 1, 0.5 + g_state.spawn_timer / 30),
-              bounty = tern(g_state.spawn_rate > 1.2, 1, 2)
+              bounty = tern(g_state.spawn_timer < 60, 3, tern(g_state.spawn_rate > 1.2, 1, 2))
             })
             break
           end
