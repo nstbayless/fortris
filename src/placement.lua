@@ -73,6 +73,7 @@ function init_placement()
   g_state.placement_idx = nil
   g_state.placement_permutation = {}
   g_state.placement_count = -1
+  g_state.placement_rotation_count = 0
   g_state.placement_cache = {
     dirty = true,
     show_message_timer = 0,
@@ -292,7 +293,7 @@ function draw_placement()
 
     -- placement reason
     if text and show_message then
-      local text_width = 16 * #text
+      local text_width = 12 * #text
       local text_height = 30
       local coordx = k_dim_x * (placement.x + width2d(placement.grid) / 2) - text_width / 2
       local coordy = k_dim_x * (placement.y + height2d(placement.grid) / 2) - text_height / 2
@@ -301,7 +302,7 @@ function draw_placement()
       love.graphics.rectangle("fill", coordx, coordy, text_width, text_height)
 
       love.graphics.setColor(1, 0.8, 0.6, 0.9)
-      love.graphics.printf(text, g_font, coordx, coordy, text_width, "center")
+      love.graphics.printf(text, g_font_msg, coordx, coordy + 4, text_width, "center")
     end
   end
 
@@ -324,9 +325,9 @@ function placement_emplace()
 
   -- remove shroud
   success = board_emplace({
-    x = placement.x - 1,
-    y = placement.y - 1,
-    grid = array_2d_grow(placement.grid),
+    x = placement.x - 2,
+    y = placement.y - 2,
+    grid = array_2d_grow(array_2d_grow(placement.grid, true), false),
     force = true,
     mask = K_FOG_OF_WAR,
     value = 0
@@ -385,6 +386,9 @@ function update_placement(dx, dy, dr, dt)
 
     -- rotate
     rotate_placement(dr, proposed_placement)
+    if dr ~= 0 then
+      g_state.placement_rotation_count = g_state.placement_rotation_count + 1
+    end
 
     -- update placement only if any actual change was made.
     if dr ~= 0 or dx ~= 0 or dy ~= 0 then

@@ -1,0 +1,68 @@
+FONTLOG
+Triod Postnaja
+==========================
+
+This file provides detailed information on the Triod Postnaja font.
+This information should be distributed along with the Triod Postnaja font and
+any derivative works.
+
+
+Basic Font Information
+----------------------
+
+Triod Postnaja attempts to mimic the typefaces used to publish Old Church
+Slavonic service books prior to the 20th century. It also provides a range of
+Latin letters in the same style, sufficient for the needs of central, northern
+and western European languages.
+
+Most Old Church Slavonic fonts that provide Latin ranges are problematic in the
+Latin lowercase, because they are not imitating the uncial style; I have
+attempted to avoid this problem, especially in lowercase letters with ascenders
+or descenders.
+
+I created many of the basic Cyrillic letterforms after eyeballing a very
+low-resolution image of the repertoire of Monotype Old Bulgarian.
+
+Triod Postnaja is something of a stylistic mishmash of various period styles.
+Those seeking a more period-authentic face for setting Church Slavonic should
+have a look at Hirmos Ponomar:
+http://www.ponomar.net/cu_support.html
+
+ChangeLog
+---------
+2011-08-05  Initial release
+2013-03-22  Added mark-to-mark placement lookups. Added en-dash, em-dash and
+            ellipsis.
+2013-08-09  Fixed off-by-one error in Cyrillic Extended A, added several glyphs
+            to Extended B. Broadened capital round omega, narrowed o of uk
+            digraph.
+
+Information for Contributors
+----------------------------
+
+This font is licensed under the Open Font License (OFL).  Under the terms of
+the OFL, you may make any modifications you like, provided that, if you
+distribute the resulting font, the resulting font is also released under the
+OFL.
+
+You can read more about the OFL here:
+http://scripts.sil.org/OFL
+
+The author of this font has waived the Reserved Name clause of the OFL.
+
+If you'd like to make changes to the original font, you are free to contact
+the author of the original font (for contact information, please see the
+"Contributors" section below).  Glyph changes should be in a FontForge .sfd
+file (please make sure your version of FontForge is reasonably up-to-date).
+Please send *only* the changed glyphs, not the entire font range.  The author
+reserves the right to reject or modify any contributions.  If your contribution
+is accepted, your name will appear in the Contributors section (unless you
+specify otherwise).
+
+
+Contributors
+------------
+
+Daniel Johnson (font maintainer)
+il.basso.buffo at gmail dot com
+http://io.debian.net/~danielj/

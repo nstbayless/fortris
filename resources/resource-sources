@@ -27,6 +27,10 @@ folder guide:
   "Commercial"
   Commercial usage available, and no restrictions (other than possibly credit).
 
+[ofl]
+  "Open Font License"
+  Share with font available, can't be sold individually, and modifications require the name to be changed.
+
 ---------------------------------------------------------------------
 -- Packs and Images -------------------------------------------------
 
@@ -54,3 +58,27 @@ folder guide:
 
 [checkered-grass]
   bespoke.
+  
+  
+---------------------------------------------------------------------
+-- Fonts ------------------------------------------------------------
+
+[Ancient Kyiv]
+  freeware
+  https://fontlibrary.org/en/font/ukrainian-old
+    
+[Triod Postnaja]
+  OFL
+  https://fontlibrary.org/en/font/triod-postnaja
+
+[Textura Libera]
+  MIT (X11)
+  https://fontlibrary.org/en/font/textura-libera
+
+[Autobahn]
+  OFL
+  https://fontlibrary.org/en/font/autobahn
+
+[Gamaliel]
+  OFL
+  https://fontlibrary.org/en/font/gamaliel

@@ -33,12 +33,13 @@ function array_2d_get_bbox(arr, base_idx)
 end
 
 -- grows out the nonzero region by one, and also pushes out bounds by one.
-function array_2d_grow(arr)
+function array_2d_grow(arr, diagonals)
   local o = make_2d_array(width2d(arr) + 2, height2d(arr) + 2)
   for y, x, v in array_2d_iterate(arr) do
     if v ~= 0 then
       for ox = x,x+2 do
-        for oy = y,y+2 do
+        local narrow_y = ibool(ox ~= x + 1 and diagonals)
+        for oy = y + narrow_y,y+2 - narrow_y do
           if o[oy][ox] == 0 then
             o[oy][ox] =  v
           end
@@ -403,4 +404,8 @@ function bit.nblog(a)
     end
   end
   return 32
+end
+
+function string.trim(s)
+  return s:gsub("^%s*(.-)%s*$", "%1")
 end

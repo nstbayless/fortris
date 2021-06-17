@@ -15,13 +15,17 @@ function svy_init()
     building_idxs = {castle_id},
     protectee_idxs = {castle_id},
     money = tern(g_debug_mode, 300, 36),
+    moneycap = 200,
     hp = 10,
   }
 end
 
 function svy_gain_bounty(amount)
-  if amount > 0 then
+  if amount > 0 and g_state.svy.money < g_state.svy.moneycap then
     g_state.svy.money = g_state.svy.money + amount
+
+    -- clamp
+    g_state.svy.money = math.min(g_state.svy.money, g_state.svy.moneycap)
 
     -- TODO -- make this by observer.
     -- (placement cache depends on whether or not there are enough funds for the blocks)
@@ -148,20 +152,73 @@ function svy_goal_reachable()
   return path ~= nil
 end
 
-function svy_draw_overlay()
-  love.graphics.setColor(1, 1, 0.5)
-  local s = "$" .. tostring(g_state.svy.money) .. "   HP:" .. tostring(g_state.svy.hp)
-  if g_state.spawn_timer <= 5 then
-    s = s .. "\nControls:\n  Arrow keys -> move\n  A and S -> rotate\n  Space -> place"
-  end
-  if g_state.game_over then
-    s = "Game Over. Press Space to restart."
+function svy_draw_spiel()
+  assert(g_state.spiel_x and g_state.spiel_y)
+
+  if g_debug_mode then
+    return
   end
 
-  if g_state.spawn_timer <= 2 or g_state.game_over_timer >= 7.5 then
-    s = s .. "\n" .. k_version
+  love.graphics.setColor(1, 1, 0.5)
+  local s = ""
+  if g_state.spawn_timer <= 10 or (g_state.placement_rotation_count < 4 and g_state.spawn_timer <= 92) then
+    s = s .. "Defend your Fortress!\n"
   end
-  local text = get_cached_text(g_font, s)
-  love.graphics.draw(text, 0, 0)
+  if g_state.spawn_timer <= 5 then
+    s = s .. "Controls:\n  Arrow Keys -> Move\n  A, S -> Rotate\n  Space -> Place\n"
+  elseif g_state.spawn_timer <= 90 and g_state.placement_rotation_count < 4 then
+    s = s .. "Controls:\n  A and S -> Rotate\n"
+  end
+  if g_state.game_over then
+    s = ""
+  end
+  if s ~= "" then
+    local text = get_cached_text(g_font, s:trim())
+
+    -- shift spiel if needed
+    -- TODO: move this to update.
+    local shift = false
+    local r = 3
+    for x = -r,r,r do
+      for y = -r,r,r do
+        if bit.band(board_get_value(math.round(g_state.spiel_x + x), math.round(g_state.spiel_y + y), K_FOG_OF_WAR), K_FOG_OF_WAR) == 0 then
+          shift = true
+          break
+        end
+      end
+    end
+
+    if shift then
+      g_state.spiel_x = g_state.spiel_x + g_state.spiel_shift_dir * 0.25
+    end
+
+    if g_state.spiel_x <= g_state.board.left + 3 or g_state.spiel_x >= g_state.board.right - 3 then
+       return
+    end
+
+    love.graphics.draw(text, k_dim_x * g_state.spiel_x - text:getWidth() / 2, k_dim_y * g_state.spiel_y - 50)
+  end
+end
+
+function svy_draw_overlay()
+  love.graphics.setColor(1, 1, 0.5)
+
+  -- hp and $
+  if g_state.game_over then
+    local text = get_cached_text(g_font, "Game Over. Press Space to restart.")
+    love.graphics.draw(text, 4, 4)
+  else
+    local s = "Treasury:$" .. tostring(g_state.svy.money) .. tern(g_state.svy.money < g_state.svy.moneycap, "", " [Limit!]")
+    local text = get_cached_text(g_font, s)
+    love.graphics.draw(text, 4, 4)
+    text = get_cached_text(g_font, "Fortress:" .. tostring(g_state.svy.hp))
+    love.graphics.draw(text, 4, 30)
+    s = s .. "Fortress:" .. tostring(g_state.svy.hp)
+  end
+
+  if g_state.spawn_timer <= 2 or g_state.game_over_timer >= 14.5 then
+    love.graphics.printf(k_version, g_font, 0, 0, love.graphics.getWidth() - 4, "right")
+  end
+
   love.graphics.setColor(1, 1, 1)
 end

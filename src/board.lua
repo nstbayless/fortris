@@ -2,6 +2,7 @@
 K_WALL = 0x01
 K_ROCK = 0x02
 K_TREE = 0x04
+K_DECAL = 0x10
 K_STATIC = 0x100 -- "statics" (buildings, generally)
 K_STATIC_OBSTRUCTION = 0x200
 K_FOG_OF_WAR = 0x400

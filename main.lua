@@ -21,7 +21,7 @@ end
 
 k_dim_x = 32
 k_dim_y = 32
-k_version = "Fortris v0.5"
+k_version = "Fortris v0.5.1"
 
 k_block_colors = {"blue", "darkgray", "gray", "green", "lightblue", "orange", "yellow", "pink", "purple", "red", "red2", "white"}
 
@@ -58,6 +58,9 @@ function init_state()
   }
   g_state.spawnx = math.random(6, g_state.initial_board_width - 7)
   g_state.spawny = math.random(6, g_state.initial_board_height - 7)
+  g_state.spiel_y = g_state.spawny
+  g_state.spiel_shift_dir = tern(g_state.spawnx <= 16, 1, -1)
+  g_state.spiel_x = g_state.spawnx + g_state.spiel_shift_dir * 11
   g_state.sourcex = nil -- can be filled in later by generator.
   g_state.sourcey = nil -- can be filled in later by generator.
   pf_init()
@@ -86,8 +89,9 @@ function love.load()
   g_shaders.game_over = love.graphics.newShader("resources/shaders/game_over.shader")
 
   love.graphics.setDefaultFilter("linear", "nearest")
-  g_font = love.graphics.newFont(24, "normal", dpi())
-  g_font_effect = love.graphics.newFont(15, "normal", dpi())
+  g_font = love.graphics.newFont("resources/fonts/ofl/autobahn/autobahn.ttf", 27, "normal", dpi())
+  g_font_msg = love.graphics.newFont("resources/fonts/ofl/Gamaliel/Gamaliel.otf", 20, "normal", dpi())
+  g_font_effect = love.graphics.newFont("resources/fonts/ofl/triod-postnaja/TriodPostnaja.ttf", 15, "normal", dpi())
   g_images.grass = love.graphics.newImage("resources/images/f/checkered-grass.png")
   g_images.castle = love.graphics.newImage("resources/images/pd/wyrmsun-cc0/town_hall.png")
   g_images.goblin = new_sprite("resources/images/cl/wyrmsun-gpl/goblin_spearman.png", 72, 72, 72/2, 72/2 + 5)
@@ -168,6 +172,7 @@ function love.draw()
     if not g_state.game_over then
       draw_placement()
     end
+    svy_draw_spiel()
   end
   love.graphics.pop()
 
