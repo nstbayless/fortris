@@ -56,6 +56,11 @@ function board_tile_is_border(x, y)
   return x == board.left or x + 1 == board.right or y == board.top or y + 1 == board.bottom
 end
 
+function board_tile_in_bounds(x, y)
+  local board = g_state.board
+  return x < board.right and x >= board.left and y < board.bottom and y >= board.top
+end
+
 -- sets new bounds for the board, adding or removing tiles as needed.
 -- refreshes pathing as well.
 function board_update_bounds(left, right, top, bottom)

@@ -15,7 +15,7 @@ function svy_init()
     building_idxs = {castle_id},
     protectee_idxs = {castle_id},
     money = tern(g_debug_mode, 300, 36),
-    moneycap = 200,
+    moneycap = 100,
     hp = 10,
   }
 end

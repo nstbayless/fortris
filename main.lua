@@ -21,7 +21,7 @@ end
 
 k_dim_x = 32
 k_dim_y = 32
-k_version = "Fortris v0.5.2"
+k_version = "Fortris v0.5.4"
 
 k_block_colors = {"blue", "darkgray", "gray", "green", "lightblue", "orange", "yellow", "pink", "purple", "red", "red2", "white"}
 
@@ -95,6 +95,7 @@ function love.load()
   g_images.grass = love.graphics.newImage("resources/images/f/checkered-grass.png")
   g_images.castle = love.graphics.newImage("resources/images/pd/wyrmsun-cc0/town_hall.png")
   g_images.goblin = new_sprite("resources/images/cl/wyrmsun-gpl/goblin_spearman.png", 72, 72, 72/2, 72/2 + 5)
+  g_images.ogre = new_sprite("resources/images/cl/wyrmsun-gpl/ettin.png", 72, 72, 72/2, 72/2 + 5)
   g_images.turret = new_sprite("resources/images/pd/hv/Turret.png", 60, 60, 29, 35)
   g_images.artillery = new_sprite("resources/images/pd/hv/Artillery.png", 80, 80, 40, 60)
   g_images.turret_base = new_sprite("resources/images/pd/hv/Turret-base.png", 60, 40, 21, 15)
