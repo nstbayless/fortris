@@ -21,7 +21,7 @@ end
 
 k_dim_x = 32
 k_dim_y = 32
-k_version = "Fortris v0.5.1"
+k_version = "Fortris v0.5.3-dev"
 
 k_block_colors = {"blue", "darkgray", "gray", "green", "lightblue", "orange", "yellow", "pink", "purple", "red", "red2", "white"}
 
