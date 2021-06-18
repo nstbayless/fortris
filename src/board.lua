@@ -17,6 +17,7 @@ K_STATIC_ALL = bit.bor(K_STATIC, K_STATIC_OBSTRUCTION)
 K_OBSTRUCTION = bit.bor(K_FEATURE_MASK_OBSTRUCTION, K_STATIC_OBSTRUCTION)
 K_IMPATHABLE = bit.bor(K_OBSTRUCTION, K_TREE)
 K_VARIANTS = bit.bor(K_VARIANT, K_VARIANT2)
+K_REMOVE_IF_DESTROYED = bit.bor(K_STATIC, K_OBSTRUCTION, K_IMPATHABLE)
 
 -- board event types
 K_BOARD_EVENT_SET = 0
@@ -37,6 +38,8 @@ function board_init()
     temporary_edits = {}, -- list of {{x, y, mask, value}, ...} sets; temporarily modify these values of the board. (sparse.)
     path_dirty = true
   }
+
+  g_state.rubble_decay_timer = 0
 
   g_board_observers = {}
 
@@ -229,11 +232,31 @@ function board_location_perimeter(x, y)
   return 0
 end
 
+-- randomly remove rubble
+function board_rubble_decay(dt)
+  g_state.rubble_decay_timer = g_state.rubble_decay_timer + dt * 5
+  while g_state.rubble_decay_timer > 0 do
+    g_state.rubble_decay_timer = g_state.rubble_decay_timer - 1
+    local x = math.random(g_state.board.left, g_state.board.right - 1)
+    local y = math.random(g_state.board.top, g_state.board.bottom - 1)
+    if bit.band(board_get_value(x, y, 0), K_FEATURE_MASK) == K_DECAL then
+      board_emplace({
+        x = x,
+        y = y,
+        force = true,
+        mask = K_FEATURE_MASK,
+        value = 0
+      })
+    end
+  end
+
+end
+
 function board_draw_letterbox()
   -- draw borders
   local m = 10000
   local board = g_state.board
-  love.graphics.setColor(0, 0, 0)
+  love.graphics.setColor(0.08, 0.07, 0.09)
   love.graphics.rectangle("fill", board.left * k_dim_x -m, board.top * k_dim_y -m, m * 2 + board_width() * k_dim_x, m)
   love.graphics.rectangle("fill", board.left * k_dim_x -m, board.top * k_dim_y, m, board_height() * k_dim_y)
   love.graphics.rectangle("fill", board.right * k_dim_x, board.top * k_dim_y, m, board_height() * k_dim_y)
@@ -279,7 +302,7 @@ end
 function board_emplace(opts, test)
   local base_x = opts.x
   local base_y = opts.y
-  local grid = opts.grid or make_2d_array(opts.w, opts.h, 1)
+  local grid = opts.grid or make_2d_array(opts.w or 1, opts.h or 1, 1)
   local all = not not opts.all
   local any_free = false
   local cmask = d(opts.cmask, opts.mask, 0xffffffff) -- "compare mask"

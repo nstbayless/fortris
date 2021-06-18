@@ -55,6 +55,20 @@ function static_test_emplace(opt, mask)
   })
 end
 
+-- returns id of static at given coordinate, or nil if none.
+function static_at(x, y)
+  for id, static in pairs(g_state.statics) do
+    if static.x <= x and static.x + static.w > x and static.y <= y and static.y + static.h > y then
+      local row = static.grid[y - static.y + 1]
+      if row and row[x - static.x + 1] ~= 0 then
+        return static.id
+      end
+    end
+  end
+
+  return false
+end
+
 -- inserts static, and returns id.
 function static_emplace(opt)
   assert(opt ~= nil)
@@ -80,9 +94,10 @@ function static_emplace(opt)
     h = opt.h,
     grid = grid,
     collision_flags = opt.collision_flags or K_STATIC_ALL,
+    destroyable = opt.destroyable or true,
     props = opt.props or {}, -- user-defined properties
     fn_update = opt.fn_update or nil,
-    id = g_next_static_id
+    id = id
   }
 
   -- clear fog of war
@@ -143,9 +158,11 @@ function static_remove(id)
       x = static.x,
       y = static.y,
       grid = static.grid,
+      force = true,
       mask = K_STATIC_ALL,
       value = 0
     })
-    g_state.statics:remove(id)
+    g_state.statics[id] = nil
+    table.remove(g_state.statics, id)
   end
 end

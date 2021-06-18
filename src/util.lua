@@ -336,6 +336,10 @@ function point_distance(x1, y1, x2, y2)
 end
 
 function math.frandom(a, b)
+  if a == nil and b == nil then
+    a = 0
+    b = 1
+  end
   if a == nil then
     a = 0
   end
@@ -344,6 +348,12 @@ function math.frandom(a, b)
   end
 
   return a + math.random() * (b - a)
+end
+
+function ilinweightrandom(a, b)
+  local r = math.frandom()
+  local p = r * r
+  return math.round(p * b + (1 - p) * a)
 end
 
 math.tau = math.pi * 2
@@ -408,4 +418,57 @@ end
 
 function string.trim(s)
   return s:gsub("^%s*(.-)%s*$", "%1")
+end
+
+function lerp(x, a, b)
+  return (1 - x) * a + x * b
+end
+
+-- https://stackoverflow.com/a/45365150
+function disp_time(time)
+  local floor = math.floor
+  local days = floor(time/86400)
+  local remaining = time % 86400
+  local hours = floor(remaining/3600)
+  local hours_s, days_s, minutes_s, seconds_s
+  remaining = remaining % 3600
+  local minutes = floor(remaining/60)
+  remaining = remaining % 60
+  local seconds = remaining
+  if (hours < 10) then
+    hours_s = "0" .. tostring(hours)
+  else
+    hours_s = tostring(hours)
+  end
+  if (minutes < 10) then
+    minutes_s = "0" .. tostring(minutes)
+  else
+    minutes_s = tostring(minutes)
+  end
+  if (seconds < 10) then
+    seconds_s = "0" .. tostring(seconds)
+  else
+    seconds_s = tostring(seconds)
+  end
+  local answer = tern(days > 0, tostring(days)..':', "")..tern(hours > 0, hours_s..':', '')..minutes_s..':'..seconds_s
+  return answer
+end
+
+function poisson(t, r)
+  local lambda = tern(r, r * t, t)
+  assert(lambda)
+  local x = math.frandom() -- sampler
+  local maxcalc = 1000
+  local p = math.exp(-lambda)
+  assert(p > 0)
+  for k = 0,maxcalc do
+    -- probability p(k)
+    if x <= p then
+      return k
+    else
+      x = x - p
+      p = p * lambda / math.max(k, 1)
+    end
+  end
+  return maxcalc + 1
 end

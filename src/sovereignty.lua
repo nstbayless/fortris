@@ -6,6 +6,7 @@ function svy_init()
     w = 2,
     h = 2,
     image = g_images.castle,
+    destroyable = false,
     fog_clear_radius = 4,
   })
 
@@ -42,26 +43,30 @@ function svy_lose_hp(amount)
   end
 end
 
--- for now, goal is just the first castle.
-function svy_pathfind_to_goal(x, y)
+function svy_pathfind_to_goal(x, y, deterministic)
+  deterministic = deterministic or false
   local svy = g_state.svy
   if #svy.protectee_idxs == 0 then
     return nil, nil
   end
-  local protectee = static_get(svy.protectee_idxs[1])
-  local px, py = protectee.x, protectee.y
+  local protectee = static_get(svy.protectee_idxs[tern(deterministic, 1, math.random(#svy.protectee_idxs))])
+  
   -- temporarily consider the goal to be pathable.
   board_push_temporary_change_from_grid(protectee.x, protectee.y, protectee.grid, K_IMPATHABLE, 0)
+
+  -- path to a random location on it.
+  local px, py = protectee.x + tern(deterministic, 0, math.random(0, protectee.w - 1)), protectee.y + tern(deterministic, 0, math.random(0, protectee.h - 1))
   local path, length = board_pathfind(x, y, px, py)
   board_pop_temporary_change()
   return path, length
 end
 
-function svy_get_goal_coordinates()
-  for goal_idx in entries(g_state.svy.protectee_idxs) do
+-- returns coordinates of a random goal
+function svy_get_any_goal_coordinates()
+  for goal_idx in entries(shuffle(g_state.svy.protectee_idxs)) do
     local goal = static_get(goal_idx)
     if goal then
-      return goal.x, goal.y
+      return goal.x + math.random(0, goal.w - 1), goal.y + math.random(0, goal.h - 1)
     end
   end
 end
@@ -214,7 +219,14 @@ function svy_draw_overlay()
 
   -- hp and $
   if g_state.game_over then
-    local text = get_cached_text(g_font, "Game Over. Press Space to restart.")
+    local s = "Game Over. Press Space to restart.\n"
+
+    local timer = g_state.spawn_timer - tern(g_state.game_over_timer < K_GAME_OVER_STOP_TIME + 1, 1, 0)
+    s = s .. tostring(g_state.kills) .. tern(g_state.kills == 1, " invader", " invaders")
+    s = s .. " thwarted in " .. disp_time(math.floor(g_state.spawn_timer))
+
+    local text = get_cached_text(g_font, s)
+    
     love.graphics.draw(text, 4, 4)
   else
     local s = "Treasury:$" .. tostring(g_state.svy.money) .. tern(g_state.svy.money < g_state.svy.moneycap, "", " [Limit!]")

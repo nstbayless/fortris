@@ -22,6 +22,7 @@ end
 k_dim_x = 32
 k_dim_y = 32
 k_version = "Fortris v0.5.4"
+K_GAME_OVER_STOP_TIME = 3 -- how long it takes to fade out and stop after game over
 
 k_block_colors = {"blue", "darkgray", "gray", "green", "lightblue", "orange", "yellow", "pink", "purple", "red", "red2", "white"}
 
@@ -44,17 +45,22 @@ require("src.camera")
 require("src.sprite")
 require("src.unit")
 require("src.board_graphics")
+require("src.test")
 
 function init_state()
   g_state = {
     time = 0,
     spawn_rate = 1/5,
     spawn_progress = 0.5,
+    ogre_spawn_rate = 1/60,
+    ogre_spawn_progress = tern(g_debug_mode, 1, -1),
     spawn_timer = 0,
     game_over = false,
     game_over_timer = 0,
+    game_over_complete = false,
     initial_board_width = 40,
     initial_board_height = 24,
+    kills = 0
   }
   g_state.spawnx = math.random(6, g_state.initial_board_width - 7)
   g_state.spawny = math.random(6, g_state.initial_board_height - 7)
@@ -72,6 +78,9 @@ function init_state()
   effects_init()
   init_placement()
   camera_init()
+  if g_test_mode then
+    test_init()
+  end
 end
 
 function love.load()
@@ -95,7 +104,7 @@ function love.load()
   g_images.grass = love.graphics.newImage("resources/images/f/checkered-grass.png")
   g_images.castle = love.graphics.newImage("resources/images/pd/wyrmsun-cc0/town_hall.png")
   g_images.goblin = new_sprite("resources/images/cl/wyrmsun-gpl/goblin_spearman.png", 72, 72, 72/2, 72/2 + 5)
-  g_images.ogre = new_sprite("resources/images/cl/wyrmsun-gpl/ettin.png", 72*2, 72*2, 72, 72 + 5)
+  g_images.ogre = new_sprite("resources/images/cl/wyrmsun-gpl/ettin.png", 72*2, 72*2, 72, 80)
   g_images.turret = new_sprite("resources/images/pd/hv/Turret.png", 60, 60, 29, 35)
   g_images.artillery = new_sprite("resources/images/pd/hv/Artillery.png", 80, 80, 40, 60)
   g_images.turret_base = new_sprite("resources/images/pd/hv/Turret-base.png", 60, 40, 21, 15)
@@ -181,30 +190,30 @@ function love.draw()
   svy_draw_overlay()
 end
 
-g_debug_has_spawned_ogre = false
-
 function spawn_monsters(dt)
   -- spawning monsters
   if g_state.placement_count >= 2 then
     g_state.spawn_timer = g_state.spawn_timer + dt
     g_state.spawn_rate = g_state.spawn_rate + dt / 500
     g_state.spawn_progress = g_state.spawn_progress + dt * g_state.spawn_rate
+    g_state.ogre_spawn_progress = g_state.ogre_spawn_progress + dt * g_state.ogre_spawn_rate
 
     -- spawn ogre
-    if g_debug_mode then
-      if g_state.spawn_timer >= 2 and not g_debug_has_spawned_ogre then
-        g_debug_has_spawned_ogre = true
-        local sx, sy = board_perimeter_location(math.random(board_perimeter()))
-        unit_emplace(g_images.ogre, sx, sy, {
-          move_speed = 0.45,
-          animation_speed = 2.5,
-          healthbar_offy = -40,
-          healthbar_width = 50,
-          impathable = 0,
-          hp = 35,
-          bounty = 20,
-        })
-      end
+    if g_state.ogre_spawn_progress >= 1 then
+      g_state.ogre_spawn_progress = 0
+      g_state.ogre_spawn_rate = math.min(1/16, g_state.ogre_spawn_rate * 1.027)
+      local sx, sy = board_perimeter_location(math.random(board_perimeter()))
+      unit_emplace(g_images.ogre, sx, sy, {
+        move_speed = 0.45 + math.frandom(0.05),
+        animation_speed = 2.5,
+        healthbar_offy = -40,
+        healthbar_width = 50,
+        impathable = 0, -- paths through solids
+        breaker = true, -- breaks terrain
+        squashable = false,
+        hp = 21 + g_state.spawn_timer / 25 + math.sqrt(g_state.spawn_timer / 100) + (math.frandom(4) - math.frandom(1)) * (1 + g_state.spawn_timer / 50),
+        bounty = math.round(20 - math.clamp(g_state.spawn_timer / 60 - 200, 0, 5)),
+      })
     end
 
     -- spawn goblin
@@ -254,11 +263,18 @@ function love.update(dt)
       init_state()
     else
       -- gradually slow down to a stop.
-      dt = dt * math.clamp(1 - g_state.game_over_timer / 3, 0, 1)
+      dt = dt * math.clamp(1 - g_state.game_over_timer / K_GAME_OVER_STOP_TIME, 0, 1)
+
+      if dt == 0 then
+        g_state.game_over_complete = true
+      end
     end
   end
 
   g_state.time = g_state.time + dt
+  if g_test_mode then
+    test_update(dt)
+  end
   update_input()
   dx = ibool(key_pressed("right")) - ibool(key_pressed("left"))
   dy = ibool(key_pressed("down")) - ibool(key_pressed("up"))

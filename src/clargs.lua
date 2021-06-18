@@ -1,5 +1,6 @@
 -- parse command line args
 g_debug_mode = table.contains(arg, "debug") or table.contains(arg, "--debug")
+g_test_mode = table.contains(arg, "test") or table.contains(arg, "--test") -- testing active
 
 g_seed = nil
 local seed_idx = indexof(arg, "seed") or indexof(arg, "--seed")

@@ -12,6 +12,9 @@ function update_input()
     g_input[key] = g_input[key] or {false, false, false}
     local prev_down = g_input[key][K_IDX_HELD]
     local down = love.keyboard.isDown(key)
+    if g_test_mode then
+      down = test_get_key_down(key)
+    end
     g_input[key][K_IDX_PRESSED] = down and not prev_down
     g_input[key][K_IDX_HELD] = down
     g_input[key][K_IDX_RELEASED] = prev_down and not down

@@ -325,9 +325,9 @@ function placement_emplace()
 
   -- remove shroud
   success = board_emplace({
-    x = placement.x - 2,
-    y = placement.y - 2,
-    grid = array_2d_grow(array_2d_grow(placement.grid, true), false),
+    x = placement.x - 3,
+    y = placement.y - 3,
+    grid = array_2d_grow(array_2d_grow(array_2d_grow(placement.grid, true), false), false),
     force = true,
     mask = K_FOG_OF_WAR,
     value = 0

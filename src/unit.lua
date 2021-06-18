@@ -5,6 +5,9 @@ K_ANIMATION_WALK[1] = 10
 K_ANIMATION_WALK[2] = 15
 K_ANIMATION_WALK[3] = 20
 
+-- easing into and out of turn speeds (reciprocal of seconds to fully change speed)
+K_TURNING_TIMER_DEPRECIATION_RATE = 3.6
+
 local g_unit_id = 0
 
 function unit_init()
@@ -32,9 +35,10 @@ function unit_on_board_update(det)
       local base_y = det.y
       local grid = det.grid
       for id, unit in pairs(g_state.units) do
-        if unit.path and unit_path_intersects_grid(unit.path, base_x, base_y, grid) then
-          unit.path = nil
-          unit_repath(id)
+        if bit.band(det.value, unit.impathable) ~= 0 then
+          if unit.path and unit_path_intersects_grid(unit.path, base_x, base_y, grid) then
+            unit_repath(id)
+          end
         end
       end
     else
@@ -56,7 +60,10 @@ function unit_emplace(sprite, x, y, opts)
     -- stats
     health = opts.hp or opts.health or opts.hpmax or opts.healthmax or 4,
     healthmax = opts.hpmax or opts.healthmax or opts.hp or opts.health or 4,
+    health_drain_indicator = opts.hp or opts.health or opts.hpmax or opts.healthmax or 4, -- TODO: just set health_drain_indicator = health
     bounty = opts.bounty or 2,
+    breaker = opts.breaker or false, -- breaks walls
+    squashable = tern(opts.squashable == nil, true, opts.squashable), -- can be crushed by placing a wall
 
     -- what the unit cannot path through
     impathable = opts.impathable or K_IMPATHABLE,
@@ -64,7 +71,9 @@ function unit_emplace(sprite, x, y, opts)
     -- movement rate (tiles per second)
     move_speed = opts.move_speed or 1,
     move_speed_concealed = opts.move_speed_concealed or (opts.move_speed or 1) * 10, -- speed when in fog of war
+    move_speed_ratio_turning = 0.70,
     concealed = nil,
+    turning_timer = 0,
 
     -- tile distance moved (in dx, dy)
     move_distance = 0,
@@ -98,6 +107,8 @@ function unit_get(id)
   return g_state.units[id]
 end
 
+-- sets unit.path to go from unit's current coordinates to the goal.
+-- if no such path can be found, unit.path is set to nil instead. 
 function unit_repath(id)
   local unit = unit_get(id)
   if not unit then
@@ -107,27 +118,49 @@ function unit_repath(id)
   local path = nil
 
   if unit.impathable == 0 then
-    -- since nothing is impathable, we can take a beeline.
-    local gx, gy = svy_get_goal_coordinates()
-    path = {tern(math.random() > 0.5, {
-      x = unit.x,
+    -- since nothing is impathable, we can take a beeline or existing path.
+    if unit.path then
+      -- TODO: recalculate path if the given path doesn't end at goal
+      -- (we have to do at least this to satisfy the conditons of repath)
+      return
+    end
+
+    -- semi-random path
+    local gx, gy = svy_get_any_goal_coordinates()
+    path = { {x=unit.x, y=unit.y} }
+
+    for _ =1,100 do
+      table.insert(path, tern(math.random() > 0.5, {
+        x = path[#path].x,
+        y = ilinweightrandom(path[#path].y, gy)
+      }, {
+        x = ilinweightrandom(path[#path].x, gx),
+        y = path[#path].y
+      }))
+    end
+    
+    table.insert(path, tern(math.random() > 0.5, {
+      x = path[#path].x,
       y = gy
     }, {
       x = gx,
-      y = unit.y
-    }), {x=gx, y=gy}}
+      y = path[#path].y
+    }))
+    table.insert(path, {x=gx, y=gy})
   else
     -- need to path properly.
     path = svy_pathfind_to_goal(unit.x, unit.y)
   end
+
   if path then
     unit.path = densify_path(path)
+  else
+    unit.path = nil
   end
 end
 
 function unit_repath_all()
   for id, unit in pairs(g_state.units) do
-    unit.path = nil
     unit_repath(id)
   end
 end
@@ -162,6 +195,7 @@ function unit_splatter(id)
     end
 
     local squash_bounty = math.ceil(unit.bounty * 1.5)
+    g_state.kills = g_state.kills + 1
     effects_create_text(gx * k_dim_x, gy * k_dim_y, "$" .. tostring(squash_bounty))
     svy_gain_bounty(squash_bounty)
     unit_remove(id)
@@ -174,8 +208,10 @@ function unit_splatter_at_grid(x, y, grid)
     if v then
       for id, unit in unit_iterate() do
         if unit.x == x + xo and unit.y == y + yo then
-          unit_splatter(id)
-          splatter_count = splatter_count + 1
+          if unit.squashable then
+            unit_splatter(id)
+            splatter_count = splatter_count + 1
+          end
         end
       end
     end
@@ -209,6 +245,7 @@ function unit_apply_damage(id, amount, effect)
     if unit.health <= 0 then
       -- death
       unit.health = 0
+      g_state.kills = g_state.kills + 1
       svy_gain_bounty(unit.bounty)
       effects_create_text(px, py, "$" .. tostring(unit.bounty))
       unit_remove(id)
@@ -253,8 +290,25 @@ function unit_path_wander(id)
   end
 end
 
+function unit_check_concealed(id)
+  local unit = unit_get(id)
+  if unit then
+    unit.concealed = true
+    for x = -1,1 do
+      for y = -1,1 do
+        if bit.band(board_get_value(unit.x + x, unit.y + y, K_FOG_OF_WAR), K_FOG_OF_WAR) ==0 then
+          unit.concealed = false
+          return
+        end
+      end
+    end
+  end
+end
+
 function unit_update(id, dt)
   local unit = g_state.units[id]
+
+  unit.health_drain_indicator = math.max(unit.health, unit.health_drain_indicator - dt * (unit.health + 2) / 1.2)
 
   -- remove first path entry if it is equal to the unit's x,y position
   while unit.path ~= nil and #(unit.path) > 0 and unit.path[1].x == unit.x and unit.path[1].y == unit.y do
@@ -269,30 +323,35 @@ function unit_update(id, dt)
   -- wander if no path found and not at goal.
   if unit.path == nil and unit.move_distance >= 0 and not svy_position_is_at_goal(unit.x, unit.y) then
     unit_path_wander(id)
+  end  
+
+  -- determine speed
+  if unit.concealed == nil then
+    unit_check_concealed(id)
+  end
+  local speed = tern(unit.concealed, unit.move_speed_concealed, unit.move_speed) * lerp(math.clamp(unit.turning_timer, 0, 1), 1, unit.move_speed_ratio_turning)
+  if unit.turning_timer > 0 then
+    unit.turning_timer = math.max(0, unit.turning_timer - dt * K_TURNING_TIMER_DEPRECIATION_RATE)
   end
 
   -- walk along path
   -- while loop accounts for possibility of such extreme
     -- lag that multiple tiles are advanced right now.
   local retry = true
-  if unit.concealed == nil then
-    unit.concealed = true
-    for x = -1,1 do
-      for y = -1,1 do
-        if not board_test_collides({x = unit.x + x, y = unit.y + y, grid = {{1}}, mask = K_FOG_OF_WAR}) then
-          unit.concealed = false
-          break
-        end
-      end
-    end
-  end
-  local speed = tern(unit.concealed, unit.move_speed_concealed, unit.move_speed)
+  local tiles_at = {{unit.x, unit.y}} -- tiles moved to this frame.
   while retry do
     retry = false
     if not unit.path then
       if unit.move_distance ~= 0 then
         unit.move_distance = shrink_toward(unit.move_distance, 0, speed * dt)
-        unit.state = tern(unit.move_distance < 0, "walk", "walk-reverse")
+        local reverse = unit.move_distance < 0
+        unit.state = tern(reverse, "walk", "walk-reverse")
+
+        -- backing up counts as turning
+        if reverse then
+          -- TODO: re-add this
+          --unit.turning_timer = 1
+        end
       else
         unit.state = "idle"
       end
@@ -301,6 +360,9 @@ function unit_update(id, dt)
       local node = unit.path[1]
       local dx = node.x - unit.x
       local dy = node.y - unit.y
+      if dx ~= unit.dx or dy ~= unit.dy then
+        unit.turning_timer = math.clamp(unit.turning_timer + 2 * K_TURNING_TIMER_DEPRECIATION_RATE * dt, 0, 1)
+      end
       local goal_move_distance = math.sqrt(dx * dx + dy * dy) / 2
       unit.move_distance = unit.move_distance + speed * dt
       dt = 0
@@ -311,9 +373,12 @@ function unit_update(id, dt)
       if unit.move_distance >= goal_move_distance then
         unit.concealed = nil
         unit.move_distance = unit.move_distance - goal_move_distance * 2
+
         -- advance to next node
         unit.x = node.x
         unit.y = node.y
+        table.insert(tiles_at, {unit.x, unit.y})
+
         -- TODO: optimize by reversing order of path.
         table.remove(unit.path, 1)
         if #unit.path == 0 then
@@ -328,8 +393,50 @@ function unit_update(id, dt)
     end
   end
 
+  -- break tiles we've touched.
+  if unit.breaker then
+    unit_check_concealed(id)
+    if true then -- not unit.concealed then -- don't break if concealed
+      for _, tile in ipairs(tiles_at) do
+        local x, y = unpack(tile)
+        -- break any impathable non-goal tile
+        if bit.band(board_get_value(x, y, 0), K_IMPATHABLE) ~= 0 and not svy_position_is_at_goal(x, y) then
+          -- turn obstacle into rubble
+          board_emplace({
+            mask = bit.bor(K_REMOVE_IF_DESTROYED, tern(unit.concealed, 0, K_DECAL)),
+            force = true,
+            value = tern(unit.concealed, 0, K_DECAL),
+            x = x,
+            y = y
+          })
+
+          -- remove any statics such as turrets
+          local static = static_at(x, y)
+          local static_removed = false
+          if static and static_get(static) and static_get(static).destroyable then
+            print("static")
+            static_remove(static)
+            static_removed = true
+          else
+            print("no static")
+          end
+
+          -- this is done to briefly slow the unit.
+          -- TODO: more significant effect here.
+          unit.turning_timer = 1
+
+          if not unit.concealed then
+            -- wound unit
+            unit_apply_damage(unit.id, 1 + ibool(static_removed) * 3.5, false)
+            camera_apply_shake(0.2, 2 + math.frandom(0.2) + ibool(static_removed))
+          end
+        end
+      end
+    end
+  end
+
   -- remove unit if reaches destination
-  if unit.move_distance == 0 and svy_position_is_at_goal(unit.x, unit.y) then
+  if unit.move_distance >= 0 and svy_position_is_at_goal(unit.x, unit.y) then
     unit_remove(unit.id)
 
     -- damage sovereignty
@@ -408,7 +515,7 @@ function unit_draw(id)
   -- health bar
   -- (checking health > 0 is paranoia)
   if unit.health < unit.healthmax and unit.health > 0 then
-    draw_healthbar(px, py + unit.healthbar_offy, unit.healthbar_width, unit.healthbar_height, unit.health, unit.healthmax)
+    draw_healthbar(px, py + unit.healthbar_offy, unit.healthbar_width, unit.healthbar_height, unit.health, unit.healthmax, unit.health_drain_indicator)
   end
 end
 

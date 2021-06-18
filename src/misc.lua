@@ -14,7 +14,7 @@ function love.graphics.pop_opts()
 end
 
 -- draws healthbar centred at the given coordinates.
-function draw_healthbar(x, y, width, height, hp, hpmax)
+function draw_healthbar(x, y, width, height, hp, hpmax, hpdrain)
 
   local margin = 2
 
@@ -25,19 +25,29 @@ function draw_healthbar(x, y, width, height, hp, hpmax)
   love.graphics.rectangle("fill", x - width/2, y - height / 2, width, height)
 
   -- set color based on hp
-  local p = 1
+  local p = {0, 1, 1, 1}
   if hpmax == 0 then
-    if hp <= 0 then
-      p = 0
-    end
+    p = {0, ibool(hp > 0), ibool(hpdrain > 0)}
   else
-    p = hp / hpmax
+    p = {0, hp / hpmax, hpdrain / hpmax}
   end
-  love.graphics.setColor(hsv_to_rgb(
-    p / 3, 0.8, 0.9
-  ))
-  love.graphics.rectangle("fill", x - width/2 + margin, y - height / 2 + margin, (width - 2 * margin) * p, height - 2 * margin)
 
+  for i = 1,2 do
+    if i == 1 then
+      -- blendy color for hp
+      love.graphics.setColor(hsv_to_rgb(
+        p[2] / 3, 0.8, 0.9
+      ))
+    else
+      -- hp drain red
+      love.graphics.setColor(0.5, 0.1, 0.08)
+    end
+
+    love.graphics.rectangle(
+      "fill",
+      x - width/2 + margin + (width - 2 * margin) * p[i], y - height / 2 + margin - 1 + i,
+      (width - 2 * margin) * math.max(0, p[i + 1] - p[i]), height - 2 * margin + 1 - i)
+  end
   love.graphics.pop_opts()
 end
 
