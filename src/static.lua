@@ -163,6 +163,5 @@ function static_remove(id)
       value = 0
     })
     g_state.statics[id] = nil
-    table.remove(g_state.statics, id)
   end
 end

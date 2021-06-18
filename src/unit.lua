@@ -8,6 +8,9 @@ K_ANIMATION_WALK[3] = 20
 -- easing into and out of turn speeds (reciprocal of seconds to fully change speed)
 K_TURNING_TIMER_DEPRECIATION_RATE = 3.6
 
+-- amount of damage done to an ogre when squashing them
+K_SQUASH_DAMAGE = 5
+
 local g_unit_id = 0
 
 function unit_init()
@@ -176,29 +179,33 @@ end
 function unit_splatter(id)
   local unit = unit_get(id)
   if unit then
-    local gx, gy = unit_get_precise_grid_position(id)
-    for i = 1,7 + math.random(5) do
-      local effect = {
-        sprite = g_images.blood,
-        duration = 0.3 + math.frandom(0.3)
-      }
-      local dx, dy = math.frandom(-0.7, 0.7), math.frandom(-0.7, 0.7)
-      effects_create({
-        x = k_dim_x * (dy + gx),
-        y = k_dim_y * (dy + gy),
-        duration = 0.2 + math.frandom(0.6),
-        sprite = g_images.blood,
-        scale = 1 + math.frandom(1),
-        xspeed = dx * k_dim_x * 2 + math.frandom(-1, 1) * k_dim_x,
-        yspeed = dy * k_dim_y * 2 + math.frandom(-1, 1) * k_dim_y,
-      })
-    end
+    if unit.squashable then
+      local gx, gy = unit_get_precise_grid_position(id)
+      for i = 1,7 + math.random(5) do
+        local effect = {
+          sprite = g_images.blood,
+          duration = 0.3 + math.frandom(0.3)
+        }
+        local dx, dy = math.frandom(-0.7, 0.7), math.frandom(-0.7, 0.7)
+        effects_create({
+          x = k_dim_x * (dy + gx),
+          y = k_dim_y * (dy + gy),
+          duration = 0.2 + math.frandom(0.6),
+          sprite = g_images.blood,
+          scale = 1 + math.frandom(1),
+          xspeed = dx * k_dim_x * 2 + math.frandom(-1, 1) * k_dim_x,
+          yspeed = dy * k_dim_y * 2 + math.frandom(-1, 1) * k_dim_y,
+        })
+      end
 
-    local squash_bounty = math.ceil(unit.bounty * 1.5)
-    g_state.kills = g_state.kills + 1
-    effects_create_text(gx * k_dim_x, gy * k_dim_y, "$" .. tostring(squash_bounty))
-    svy_gain_bounty(squash_bounty)
-    unit_remove(id)
+      local squash_bounty = math.ceil(unit.bounty * 1.5)
+      g_state.kills = g_state.kills + 1
+      effects_create_text(gx * k_dim_x, gy * k_dim_y, "$" .. tostring(squash_bounty))
+      svy_gain_bounty(squash_bounty)
+      unit_remove(id)
+    else
+      unit_apply_damage(id, K_SQUASH_DAMAGE)
+    end
   end
 end
 
@@ -208,10 +215,8 @@ function unit_splatter_at_grid(x, y, grid)
     if v then
       for id, unit in unit_iterate() do
         if unit.x == x + xo and unit.y == y + yo then
-          if unit.squashable then
-            unit_splatter(id)
-            splatter_count = splatter_count + 1
-          end
+          unit_splatter(id)
+          splatter_count = splatter_count + 1
         end
       end
     end
@@ -414,11 +419,8 @@ function unit_update(id, dt)
           local static = static_at(x, y)
           local static_removed = false
           if static and static_get(static) and static_get(static).destroyable then
-            print("static")
             static_remove(static)
             static_removed = true
-          else
-            print("no static")
           end
 
           -- this is done to briefly slow the unit.

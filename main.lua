@@ -52,7 +52,7 @@ function init_state()
     time = 0,
     spawn_rate = 1/5,
     spawn_progress = 0.5,
-    ogre_spawn_rate = 1/60,
+    ogre_spawn_rate = 1/80,
     ogre_spawn_progress = tern(g_debug_mode, 1, -1),
     spawn_timer = 0,
     game_over = false,
@@ -211,7 +211,7 @@ function spawn_monsters(dt)
         impathable = 0, -- paths through solids
         breaker = true, -- breaks terrain
         squashable = false,
-        hp = 21 + g_state.spawn_timer / 25 + math.sqrt(g_state.spawn_timer / 100) + (math.frandom(4) - math.frandom(1)) * (1 + g_state.spawn_timer / 50),
+        hp = 26 + g_state.spawn_timer / 20 + math.sqrt(g_state.spawn_timer / 100) + (math.frandom(4) - math.frandom(1)) * (1 + g_state.spawn_timer / 50),
         bounty = math.round(20 - math.clamp(g_state.spawn_timer / 60 - 200, 0, 5)),
       })
     end
@@ -282,6 +282,7 @@ function love.update(dt)
 
   if dt > 0 then
     update_placement(dx, dy, dr, dt)
+    board_rubble_decay(dt)
 
     spawn_monsters(dt)
     effects_update(dt)
