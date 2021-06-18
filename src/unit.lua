@@ -58,24 +58,27 @@ function unit_emplace(sprite, x, y, opts)
     healthmax = opts.hpmax or opts.healthmax or opts.hp or opts.health or 4,
     bounty = opts.bounty or 2,
 
+    -- what the unit cannot path through
+    impathable = opts.impathable or K_IMPATHABLE,
+
     -- movement rate (tiles per second)
-    move_speed = 1,
-    move_speed_concealed = 10, -- speed when in fog of war
+    move_speed = opts.move_speed or 1,
+    move_speed_concealed = opts.move_speed_concealed or (opts.move_speed or 1) * 10, -- speed when in fog of war
     concealed = nil,
 
     -- tile distance moved (in dx, dy)
     move_distance = 0,
 
     -- direction
-    dx = 1,
-    dy = 0,
+    dx = opts.initial_dx or 1,
+    dy = opts.initial_dx or 0,
 
     -- animation
     state = "idle",
-    animation_speed = 5.5, -- temp/arbitrary
-    healthbar_offy = -25, -- temp/arbitrary
-    healthbar_height = 9,
-    healthbar_width = 30, -- temp/arbitrary
+    animation_speed = opts.animation_speed or 5.5, -- temp/arbitrary
+    healthbar_offy = opts.healthbar_offy or -25, -- temp/arbitrary
+    healthbar_height = opts.healthbar_height or 9,
+    healthbar_width = opts.healthbar_width or 30, -- temp/arbitrary
 
     -- sprite
     sprite = sprite
@@ -101,7 +104,22 @@ function unit_repath(id)
     return
   end
 
-  local path, _ = svy_pathfind_to_goal(unit.x, unit.y)
+  local path = nil
+
+  if unit.impathable == 0 then
+    -- since nothing is impathable, we can take a beeline.
+    local gx, gy = svy_get_goal_coordinates()
+    path = {tern(math.random() > 0.5, {
+      x = unit.x,
+      y = gy
+    }, {
+      x = gx,
+      y = unit.y
+    }), {x=gx, y=gy}}
+  else
+    -- need to path properly.
+    path = svy_pathfind_to_goal(unit.x, unit.y)
+  end
   if path then
     unit.path = densify_path(path)
   end
@@ -210,6 +228,31 @@ function unit_update_all(dt)
   unit_process_removals()
 end
 
+function unit_path_wander(id)
+  local unit = unit_get(id)
+  if not unit then
+    return nil
+  end
+
+  local blocking_grid = make_2d_array(3, 3, 0)
+  for y, x in array_2d_iterate(blocking_grid, 1) do
+    if bit.band(board_get_value(x + unit.x - 2, y + unit.y - 2, K_IMPATHABLE), K_IMPATHABLE) ~= 0 then
+      blocking_grid[y][x] = 1
+    end
+  end
+
+  for _, i in ipairs(shuffle(iota(0, 8))) do
+    local x = (i % 3) + 1
+    local y = math.floor(i / 3) + 1
+    if x ~= 2 or y ~= 2 then
+      if blocking_grid[y][x] == 0 then
+        unit.path = {{x = x + unit.x - 2, y = y + unit.y - 2}}
+        break
+      end
+    end
+  end
+end
+
 function unit_update(id, dt)
   local unit = g_state.units[id]
 
@@ -225,25 +268,7 @@ function unit_update(id, dt)
 
   -- wander if no path found and not at goal.
   if unit.path == nil and unit.move_distance >= 0 and not svy_position_is_at_goal(unit.x, unit.y) then
-    local blocking_grid = make_2d_array(3, 3, 0)
-    for y, x in array_2d_iterate(blocking_grid, 1) do
-      if bit.band(board_get_value(x + unit.x - 2, y + unit.y - 2, K_IMPATHABLE), K_IMPATHABLE) ~= 0 then
-        blocking_grid[y][x] = 1
-      end
-    end
-
-    for _, i in ipairs(shuffle(iota(0, 8))) do
-      local x = (i % 3) + 1
-      local y = math.floor(i / 3) + 1
-      if x ~= 2 or y ~= 2 then
-        print(i, x, y, blocking_grid[y][x])
-        if blocking_grid[y][x] == 0 then
-          unit.path = {{x = x + unit.x - 2, y = y + unit.y - 2}}
-          print("set path")
-          break
-        end
-      end
-    end
+    unit_path_wander(id)
   end
 
   -- walk along path

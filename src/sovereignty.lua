@@ -57,6 +57,15 @@ function svy_pathfind_to_goal(x, y)
   return path, length
 end
 
+function svy_get_goal_coordinates()
+  for goal_idx in entries(g_state.svy.protectee_idxs) do
+    local goal = static_get(goal_idx)
+    if goal then
+      return goal.x, goal.y
+    end
+  end
+end
+
 function svy_position_is_at_goal(x, y)
   for goal_idx in entries(g_state.svy.protectee_idxs) do
     local goal = static_get(goal_idx)

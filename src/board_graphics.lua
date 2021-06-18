@@ -77,7 +77,6 @@ end
 
 -- for debugging / profiling only
 g_refresh_count = 0
-g_tile_change_count = 0
 
 function bgfx_refresh_tile(bgfx, x, y)
   -- (pass-by-reference idx into function to allow updating it.)
@@ -137,7 +136,6 @@ function bgfx_on_board_update(event)
     -- for debugging
     if g_debug_mode then
       g_refresh_count = 0
-      g_tile_change_count = 0
     end
 
     -- if only one tile changed, refresh only the given tiles and their neighbours
@@ -151,7 +149,6 @@ function bgfx_on_board_update(event)
             if board_tile_in_bounds(x, y) then
               bgfx_refresh_tile(bgfx, x, y)
             end
-            g_tile_change_count = g_tile_change_count + 1
           end
         end
       end
@@ -163,10 +160,6 @@ function bgfx_on_board_update(event)
     -- (bgfx_refresh called in bgfx_init to make up for this.)
     if event.etype == K_BOARD_EVENT_RESIZE_END then
       bgfx_refresh(bgfx)
-    end
-
-    if g_debug_mode and g_refresh_count > 0 then
-      print("layer " .. key .. ": " .. tostring(g_refresh_count) .. " subtiles refreshed, and " .. tostring(g_tile_change_count) .. " tiles checked")
     end
   end
 end

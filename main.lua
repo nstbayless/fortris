@@ -95,7 +95,7 @@ function love.load()
   g_images.grass = love.graphics.newImage("resources/images/f/checkered-grass.png")
   g_images.castle = love.graphics.newImage("resources/images/pd/wyrmsun-cc0/town_hall.png")
   g_images.goblin = new_sprite("resources/images/cl/wyrmsun-gpl/goblin_spearman.png", 72, 72, 72/2, 72/2 + 5)
-  g_images.ogre = new_sprite("resources/images/cl/wyrmsun-gpl/ettin.png", 72, 72, 72/2, 72/2 + 5)
+  g_images.ogre = new_sprite("resources/images/cl/wyrmsun-gpl/ettin.png", 72*2, 72*2, 72, 72 + 5)
   g_images.turret = new_sprite("resources/images/pd/hv/Turret.png", 60, 60, 29, 35)
   g_images.artillery = new_sprite("resources/images/pd/hv/Artillery.png", 80, 80, 40, 60)
   g_images.turret_base = new_sprite("resources/images/pd/hv/Turret-base.png", 60, 40, 21, 15)
@@ -181,6 +181,49 @@ function love.draw()
   svy_draw_overlay()
 end
 
+g_debug_has_spawned_ogre = false
+
+function spawn_monsters(dt)
+  -- spawning monsters
+  if g_state.placement_count >= 2 then
+    g_state.spawn_timer = g_state.spawn_timer + dt
+    g_state.spawn_rate = g_state.spawn_rate + dt / 500
+    g_state.spawn_progress = g_state.spawn_progress + dt * g_state.spawn_rate
+
+    -- spawn ogre
+    if g_debug_mode then
+      if g_state.spawn_timer >= 2 and not g_debug_has_spawned_ogre then
+        g_debug_has_spawned_ogre = true
+        local sx, sy = board_perimeter_location(math.random(board_perimeter()))
+        unit_emplace(g_images.ogre, sx, sy, {
+          move_speed = 0.45,
+          animation_speed = 2.5,
+          healthbar_offy = -40,
+          healthbar_width = 50,
+          impathable = 0,
+          hp = 35,
+          bounty = 20,
+        })
+      end
+    end
+
+    -- spawn goblin
+    while g_state.spawn_progress >= 1 do
+      g_state.spawn_progress = g_state.spawn_progress - 1
+      for _ = 1,30 do
+        local sx, sy = board_perimeter_location(math.random(board_perimeter()))
+        if svy_pathfind_to_goal(sx, sy) then
+          unit_emplace(g_images.goblin, sx, sy, {
+            hp = tern(g_state.spawn_timer < 30, 1, 0.5 + g_state.spawn_timer / 30),
+            bounty = get_monster_bounty()
+          })
+          break
+        end
+      end
+    end
+  end
+end
+
 function get_monster_bounty()
   local bounty = 5
   if g_state.spawn_timer > 60 then
@@ -224,25 +267,7 @@ function love.update(dt)
   if dt > 0 then
     update_placement(dx, dy, dr, dt)
 
-    -- spawning monsters
-    if g_state.placement_count >= 2 then
-      g_state.spawn_timer = g_state.spawn_timer + dt
-      g_state.spawn_rate = g_state.spawn_rate + dt / 500
-      g_state.spawn_progress = g_state.spawn_progress + dt * g_state.spawn_rate
-      while g_state.spawn_progress >= 1 do
-        g_state.spawn_progress = g_state.spawn_progress - 1
-        for _ = 1,30 do
-          local sx, sy = board_perimeter_location(math.random(board_perimeter()))
-          if svy_pathfind_to_goal(sx, sy) then
-            unit_emplace(g_images.goblin, sx, sy, {
-              hp = tern(g_state.spawn_timer < 30, 1, 0.5 + g_state.spawn_timer / 30),
-              bounty = get_monster_bounty()
-            })
-            break
-          end
-        end
-      end
-    end
+    spawn_monsters(dt)
     effects_update(dt)
     static_update_all(dt)
     unit_update_all(dt)
