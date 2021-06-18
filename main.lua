@@ -21,7 +21,7 @@ end
 
 k_dim_x = 32
 k_dim_y = 32
-k_version = "Fortris v0.6.1"
+k_version = "Fortris v0.6.2"
 K_GAME_OVER_STOP_TIME = 3 -- how long it takes to fade out and stop after game over
 
 k_block_colors = {"blue", "darkgray", "gray", "green", "lightblue", "orange", "yellow", "pink", "purple", "red", "red2", "white"}
@@ -211,7 +211,7 @@ function spawn_monsters(dt)
         impathable = 0, -- paths through solids
         breaker = true, -- breaks terrain
         squashable = false,
-        hp = 26 + g_state.spawn_timer / 20 + math.sqrt(g_state.spawn_timer / 100) + (math.frandom(4) - math.frandom(1)) * (1 + g_state.spawn_timer / 50),
+        hp = 20 + g_state.spawn_timer / 10 + math.sqrt(g_state.spawn_timer / 100) + (math.frandom(4) - math.frandom(1)) * (1 + g_state.spawn_timer / 50),
         bounty = math.round(20 - math.clamp(g_state.spawn_timer / 60 - 200, 0, 5)),
       })
     end

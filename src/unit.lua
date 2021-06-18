@@ -405,12 +405,15 @@ function unit_update(id, dt)
       for _, tile in ipairs(tiles_at) do
         local x, y = unpack(tile)
         -- break any impathable non-goal tile
-        if bit.band(board_get_value(x, y, 0), K_IMPATHABLE) ~= 0 and not svy_position_is_at_goal(x, y) then
-          -- turn obstacle into rubble
+        local board_value = bit.band(board_get_value(x, y, 0), K_IMPATHABLE)
+        if board_value ~= 0 and not svy_position_is_at_goal(x, y) then
+          -- turn obstacle into rubble (unless unit is in shroud or trees)
+          -- TODO: trees become stumps instead
+          local overwrite = tern(unit.concealed or board_value == K_TREE, 0, K_DECAL)
           board_emplace({
-            mask = bit.bor(K_REMOVE_IF_DESTROYED, tern(unit.concealed, 0, K_DECAL)),
+            mask = bit.bor(K_REMOVE_IF_DESTROYED, overwrite),
             force = true,
-            value = tern(unit.concealed, 0, K_DECAL),
+            value = overwrite,
             x = x,
             y = y
           })
