@@ -36,6 +36,16 @@ function bgfx_init()
       return wall_get_subtile(x, y, dx, dy, K_WALL, false, true)
     end
   })
+  bgfx_add("rubble", {
+    sprite = g_images.wall,
+    mask = K_DECAL,
+    subdivided = true,
+    subtile_fn = function(x, y, dx, dy)
+      if bit.band(board_get_value(x, y, 0), K_FEATURE_MASK) == K_DECAL then
+        return 14 + ibool(dx == 1) + 4 * ibool(dy == 1)
+      end
+    end
+  })
   bgfx_add("fog", {
     sprite = g_images.fog_of_war,
     mask = K_FOG_OF_WAR,
@@ -100,19 +110,19 @@ end
 
 function bgfx_on_board_update(event)
   for key, bgfx in pairs(g_bgfx) do
-    -- refresh the given tile.
+    -- if only one tile changed, refresh only the given tiles and their neighbours
     if event.etype == K_BOARD_EVENT_SET and not event.during_board_resize then
       if bit.band(event.mask, bgfx.mask) ~= 0 then
         -- TODO / DEBUG: unclear why this "sparse update" logic fails.
-        --[[ for yo, xo, v in array_2d_iterate(event.grid, 0) do
+        for yo, xo, v in array_2d_iterate(array_2d_grow(event.grid), -1) do
           if v ~= 0 then
             local x = xo + event.x
             local y = yo + event.y
             bgfx_refresh_tile(bgfx, x, y)
           end
-        end --]]
+        end
 
-        bgfx_refresh(bgfx)
+        -- bgfx_refresh(bgfx)
       end
     end
 
@@ -155,12 +165,13 @@ end
 
 -- draws terrain features / walls
 function board_draw()
-  love.graphics.draw(g_bgfx["wall"].sprite_batch)
+  love.graphics.draw(g_bgfx.wall.sprite_batch)
+  love.graphics.draw(g_bgfx.rubble.sprite_batch)
   if g_bgfx.rock then 
-    love.graphics.draw(g_bgfx["rock"].sprite_batch)
+    love.graphics.draw(g_bgfx.rock.sprite_batch)
   end
   if g_bgfx.tree then 
-    love.graphics.draw(g_bgfx["tree"].sprite_batch)
+    love.graphics.draw(g_bgfx.tree.sprite_batch)
   end
 end
 
