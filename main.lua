@@ -21,7 +21,7 @@ end
 
 k_dim_x = 32
 k_dim_y = 32
-k_version = "Fortris v0.5.1"
+k_version = "Fortris v0.5.2"
 
 k_block_colors = {"blue", "darkgray", "gray", "green", "lightblue", "orange", "yellow", "pink", "purple", "red", "red2", "white"}
 
@@ -180,6 +180,23 @@ function love.draw()
   svy_draw_overlay()
 end
 
+function get_monster_bounty()
+  local bounty = 5
+  if g_state.spawn_timer > 60 then
+    bounty = 4
+  end
+  if g_state.spawn_timer > 120 then
+    bounty = 3
+  end
+  if g_state.spawn_timer > 170 then
+    bounty = 2
+  end
+  if g_state.spawn_timer > 240 then
+    bounty = 1
+  end
+  return bounty
+end
+
 function love.update(dt)
 
   -- cap if extreme lag
@@ -218,7 +235,7 @@ function love.update(dt)
           if svy_pathfind_to_goal(sx, sy) then
             unit_emplace(g_images.goblin, sx, sy, {
               hp = tern(g_state.spawn_timer < 30, 1, 0.5 + g_state.spawn_timer / 30),
-              bounty = tern(g_state.spawn_timer < 60, 3, tern(g_state.spawn_rate > 1.2, 1, 2))
+              bounty = get_monster_bounty()
             })
             break
           end
