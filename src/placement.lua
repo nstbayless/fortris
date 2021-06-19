@@ -260,7 +260,7 @@ function draw_placement()
     local image = g_images.blocks[placement.color]
     if not cache.placable then
       -- change block color
-      image = ({g_images.blocks.gray, g_images.blocks.red2, g_images.blocks.red, g_images.blocks.red, g_images.blocks.red})[cache.implacable_reason]
+      image = ({g_images.blocks.gray, g_images.blocks.red2, g_images.blocks.darkgray, g_images.blocks.red, g_images.blocks.red})[cache.implacable_reason]
 
       -- render blocks semitransparent
       love.graphics.setColor(1, 1, 1, 0.5)
