@@ -1,7 +1,11 @@
 set -e
 set -x
 
-rm -r jsbuild/
+if [ -d jsbuild ]
+then
+  rm -r jsbuild/
+fi
+
 zip -9 -r fortris.love assets/ resources/ src/ jumper/ bitop/ ext/ main.lua conf.lua
 #build in normal mode
 love.js -t fortris fortris.love jsbuild/

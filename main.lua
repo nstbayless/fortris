@@ -208,7 +208,7 @@ function spawn_monsters(dt)
     -- spawn ogre
     if g_state.ogre_spawn_progress >= 1 then
       g_state.ogre_spawn_progress = 0
-      g_state.ogre_spawn_rate = math.min(1/16, g_state.ogre_spawn_rate * 1.027)
+      g_state.ogre_spawn_rate = math.min(1/15, g_state.ogre_spawn_rate * 1.041)
       local sx, sy = board_perimeter_location(math.random(board_perimeter()))
       unit_emplace(g_images.ogre, sx, sy, {
         move_speed = 0.45 + math.frandom(0.05),
