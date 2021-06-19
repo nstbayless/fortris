@@ -50,11 +50,14 @@ local function base_type(x, y)
     return K_TILE_EMPTY
   end
 
-  local scale = 10
-  if simplex.Noise2D(x / scale + g_state.generate.seedx, g_state.generate.seedy + y / scale) > 0.6 then
+  local rock_scale = 10
+  local rock_coverage = 0.3
+  local tree_scale = 8
+  local tree_coverage = 0.43
+  if simplex.Noise2D(x / rock_scale + g_state.generate.seedx, g_state.generate.seedy + y / rock_scale) > 1 - rock_coverage then
     return K_ROCK
   end
-  if simplex.Noise2D(x / scale + g_state.generate.seedx_tree, g_state.generate.seedy_tree + y / scale) > 0.4 then
+  if simplex.Noise2D(x / tree_scale + g_state.generate.seedx_tree, g_state.generate.seedy_tree + y / tree_scale) > 1 - tree_coverage then
     return K_TREE
   end
   return K_TILE_EMPTY
