@@ -21,7 +21,7 @@ end
 
 k_dim_x = 32
 k_dim_y = 32
-k_version = "Fortris v0.6.2"
+k_version = "Fortris v0.6.3"
 K_GAME_OVER_STOP_TIME = 3 -- how long it takes to fade out and stop after game over
 
 k_block_colors = {"blue", "darkgray", "gray", "green", "lightblue", "orange", "yellow", "pink", "purple", "red", "red2", "white"}
@@ -34,6 +34,7 @@ g_shaders = {}
 g_hold_repeat_input = true
 k_hold_repeat_input_initial = 0.28
 k_hold_repeat_input_repeat = 0.05
+g_show_existing_turrets_when_placing = false
 
 require("src.util")
 require("src.clargs")

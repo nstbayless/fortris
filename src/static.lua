@@ -94,6 +94,7 @@ function static_emplace(opt)
     h = opt.h,
     grid = grid,
     collision_flags = opt.collision_flags or K_STATIC_ALL,
+    wall_obstacle = opt.wall_obstacle or false, -- does this block turrets? (only affects presentation)
     destroyable = opt.destroyable or true,
     props = opt.props or {}, -- user-defined properties
     fn_update = opt.fn_update or nil,
@@ -148,6 +149,10 @@ end
 
 function static_get(id)
   return g_state.statics[id]
+end
+
+function static_iterate()
+  return pairs(g_state.statics)
 end
 
 function static_remove(id)

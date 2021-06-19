@@ -204,6 +204,7 @@ function turret_emplace_potentials_at_grid(x, y, grid, dx, dy)
       y = potential.y,
       w = potential.size,
       h = potential.size,
+      wall_obstacle = true,
       collision_flags = K_STATIC,
       sprites = sprites,
       fn_update = turret_update,

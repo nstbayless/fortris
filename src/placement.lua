@@ -131,10 +131,6 @@ K_PLACEMENT_REASON_TEXT = {
 function placement_placable()
   local placement = g_state.placement
 
-  if g_state.svy.money < K_PLACEMENT_COST then
-    return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS
-  end
-
   -- check for being completely in fog of war (unless debugging)
   if not g_debug_mode then
     if board_test_collides({
@@ -169,7 +165,18 @@ function placement_placable()
   board_push_temporary_change_from_grid(placement.x, placement.y, placement.grid, K_IMPATHABLE)
   local reachable = svy_goal_reachable()
   board_pop_temporary_change()
-  return reachable, tern(reachable, 0, K_PLACEMENT_REASON_BLOCKING)
+
+  if not reachable then
+    return false, K_PLACEMENT_REASON_BLOCKING
+  end
+
+  -- check that we have sufficient money
+  if g_state.svy.money < K_PLACEMENT_COST then
+    return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS
+  end
+
+  -- can be placed.
+  return true, 0
 end
 
 -- TODO: cleanup. this is messy.
@@ -230,7 +237,7 @@ function placement_get_cache()
   if cache.dirty then
     cache.dirty = false
     cache.placable, cache.implacable_reason = placement_placable()
-    if cache.placable then
+    if cache.placable or cache.implacable_reason == K_PLACEMENT_REASON_INSUFFICIENT_FUNDS then
       board_push_temporary_change_from_grid(placement.x, placement.y, placement.grid, K_OBSTRUCTION)
       cache.turret_potentials = turret_get_potentials_at_grid(
         placement.x, placement.y, placement.grid, placement.dx, placement.dy
@@ -242,6 +249,8 @@ function placement_get_cache()
   end
   return cache
 end
+
+local K_TURRET_VIEW_OBSTRUCTION_RADIUS = 3.5
 
 function draw_placement()
   love.graphics.setColor(1, 1, 1, 0.8)
@@ -256,7 +265,7 @@ function draw_placement()
       -- render blocks semitransparent
       love.graphics.setColor(1, 1, 1, 0.5)
     end
-    for y, x, v in array_2d_iterate(g_state.placement.grid, 0) do
+    for y, x, v in array_2d_iterate(placement.grid, 0) do
       if v ~= 0 then
         local world_pos_x = x + placement.x
         local world_pos_y = y + placement.y
@@ -265,8 +274,9 @@ function draw_placement()
     end
 
     -- turret previews
-    if cache.placable then
-      love.graphics.setColor(1, 1, 1, 0.3 + 0.2 * (math.floor(g_state.time * 10) % 2))
+    if cache.placable or cache.implacable_reason == K_PLACEMENT_REASON_INSUFFICIENT_FUNDS then
+      -- show new turrets
+      love.graphics.setColor(1, 1, 1, tern(cache.placable, 0.3 + 0.2 * (math.floor(g_state.time * 10) % 2), 0.28))
       for idx, turret in pairs(cache.turret_potentials) do
         local margin = 8
 
@@ -274,14 +284,31 @@ function draw_placement()
         love.graphics.rectangle("fill", turret.x * k_dim_x + margin, turret.y * k_dim_y + margin, turret.w * k_dim_x - 2 * margin, turret.h * k_dim_y - 2 * margin)
       end
 
-      love.graphics.setColor(1, 1, 0.5, 0.8 + 0.03 * (math.sin(g_state.time * math.tau / 2)))
+      love.graphics.setColor(1, 1, tern(cache.placable, 0.5, 1), tern(cache.placable, 0.8 + 0.03 * (math.sin(g_state.time * math.tau / 2)), 0.4))
       for idx, turret in pairs(cache.turret_potentials) do
         local props = turret_get_props_by_size(turret.size)
 
         -- range circle
         local interval = 3
-        local offset = (g_state.time * 3)
+        local offset = tern(cache.placable, g_state.time * 3, g_state.time)
         draw_concentric_circles((turret.x + turret.w / 2) * k_dim_x, (turret.y + turret.h / 2) * k_dim_y, (props.min_range) * k_dim_x, props.max_range * k_dim_x, interval, offset, true)
+      end
+    end
+
+    -- show existing turrets
+    -- disabled because it looks bad
+    if g_show_existing_turrets_when_placing then
+      for idx, static in static_iterate() do
+        if static.wall_obstacle then
+          local cx, cy = static.x + static.w / 2, static.y + static.h / 2
+          local p = 2 - (point_distance(placement.x + width2d(placement.grid) / 2, placement.y + height2d(placement.grid) / 2, cx, cy) / K_TURRET_VIEW_OBSTRUCTION_RADIUS * 2)
+          if p > 0 then
+            for margin = 2,20,3 do
+              love.graphics.setColor(1, 0.9, 0.9, math.min(p, 1)/(margin / 8 + 1))
+              love.graphics.rectangle("line", k_dim_x * static.x + margin, k_dim_y * static.y + margin, k_dim_x * static.w - margin * 2, k_dim_y * static.h - margin * 2)
+            end
+          end
+        end
       end
     end
   end
@@ -291,7 +318,7 @@ function draw_placement()
     local text = K_PLACEMENT_REASON_TEXT[cache.implacable_reason]
     local show_message = cache.show_message_timer > 0 or cache.implacable_reason == K_PLACEMENT_REASON_BLOCKING or cache.implacable_reason == K_PLACEMENT_REASON_BORDER
 
-    -- placement reason
+    -- placement failure reason
     if text and show_message then
       local text_width = 12 * #text
       local text_height = 30
