@@ -30,6 +30,11 @@ g_state = {}
 g_images = {}
 g_shaders = {}
 
+-- config
+g_hold_repeat_input = true
+k_hold_repeat_input_initial = 0.28
+k_hold_repeat_input_repeat = 0.05
+
 require("src.util")
 require("src.clargs")
 require("src.misc")
@@ -69,6 +74,7 @@ function init_state()
   g_state.spiel_x = g_state.spawnx + g_state.spiel_shift_dir * 11
   g_state.sourcex = nil -- can be filled in later by generator.
   g_state.sourcey = nil -- can be filled in later by generator.
+  input_init()
   pf_init()
   board_init()
   static_init()
@@ -275,9 +281,9 @@ function love.update(dt)
   if g_test_mode then
     test_update(dt)
   end
-  update_input()
-  dx = ibool(key_pressed("right")) - ibool(key_pressed("left"))
-  dy = ibool(key_pressed("down")) - ibool(key_pressed("up"))
+  update_input(dt)
+  dx = ibool(key_pressed("right", true)) - ibool(key_pressed("left", true))
+  dy = ibool(key_pressed("down", true)) - ibool(key_pressed("up", true))
   dr = ibool(key_pressed("s")) - ibool(key_pressed("a"))
 
   if dt > 0 then
