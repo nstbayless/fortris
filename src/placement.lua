@@ -204,7 +204,7 @@ function placement_placable()
     grid=g_state.placement.grid,
     mask=K_TREE
   })
-  local cost = K_PLACEMENT_COST + 3 * tree_count
+  local cost = K_PLACEMENT_COST + 2 * tree_count
 
    -- check that we have sufficient money
    if g_state.svy.money < cost then
