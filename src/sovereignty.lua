@@ -7,7 +7,7 @@ function svy_init()
     h = 2,
     image = g_images.castle,
     destroyable = false,
-    fog_clear_radius = 4,
+    fog_clear_radius = 3,
   })
 
   -- initialize sovereignty

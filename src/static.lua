@@ -109,13 +109,13 @@ function static_emplace(opt)
   end
 
   -- clear fog of war
-  local fog_clear_radius = 3 or opt.fog_clear_radius
+  local fog_clear_radius = opt.fog_clear_radius or 3
+  local fog_clear_circle = opt.fog_clear_circle or false
 
   board_emplace({
     x = static.x - fog_clear_radius,
-    w = static.w + fog_clear_radius * 2,
     y = static.y - fog_clear_radius,
-    h = static.h + fog_clear_radius * 2,
+    grid = tern(fog_clear_circle, make_2d_array_circle, make_2d_array)(static.w + fog_clear_radius * 2, static.h + fog_clear_radius * 2, 1, 0),
     force = true,
     mask = K_FOG_OF_WAR,
     value = 0

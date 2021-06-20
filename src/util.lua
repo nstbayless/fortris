@@ -237,6 +237,21 @@ function make_2d_array(w, h, v)
   return a
 end
 
+-- creates a [y][x]-indexed 2d array containing a circle.
+function make_2d_array_circle(w, h, v, v2)
+  v = v or 1
+  v2 = v2 or 0
+  local a = {}
+  for y = 1,h do
+    a[y] = {}
+    for x = 1,w do
+      a[y][x] = tern(point_distance(w/2, h/2, x - 0.5, y - 0.5) <= math.min(w, h)/2, v, v2)
+    end
+  end
+
+  return a
+end
+
 function hx(v, k)
   k = k or 2
   return string.format("%0" .. tostring(k) .. "x", v)
