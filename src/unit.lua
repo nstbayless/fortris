@@ -179,7 +179,7 @@ end
 function unit_splatter(id)
   local unit = unit_get(id)
   if unit then
-    if unit.squashable then
+    if unit.squashable or unit.health <= K_SQUASH_DAMAGE then
       local gx, gy = unit_get_precise_grid_position(id)
       for i = 1,7 + math.random(5) do
         local effect = {
