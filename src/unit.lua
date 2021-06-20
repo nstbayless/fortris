@@ -453,14 +453,14 @@ function unit_distance_to(x, y, id)
   end
 end
 
--- returns closest unit (and its distance) to given location
+-- returns non-concealed closest unit (and its distance) to given location
 function unit_closest(x, y, min, max)
   min = min or 0
   local best = nil
   local best_id = nil
   for id, unit in unit_iterate() do
     local dist = unit_distance_to(x, y, id)
-    if ((not best) or dist < best) and dist >= min and ((not max) or dist <= max) then
+    if ((not best) or dist < best) and dist >= min and ((not max) or dist <= max) and not unit.concealed then
       best = dist
       best_id = id
     end

@@ -1,4 +1,5 @@
 K_PLACEMENT_COST = 10
+K_REMOVAL_COST = 20
 
 local K_PLACEMENTS = {
   -- T
@@ -124,7 +125,7 @@ K_PLACEMENT_REASON_DESTROY = 6
 K_PLACEMENT_REASON_DESTROY_TURRETS_COUNT = 7
 
 K_PLACEMENT_REASON_TEXT = {
-  "$" .. tostring(K_PLACEMENT_COST) .. " Required",
+  "Insufficient Funds",
   "Obstructed",
   "Blocking!",
   "Shroud",
@@ -169,12 +170,12 @@ function placement_placable()
   }) then
     -- check that we have sufficient money
     if not g_debug_mode and g_state.statics_count["turret"] < K_MINIMUM_TURRETS_FOR_DESTROY then
-      return false, K_PLACEMENT_REASON_DESTROY_TURRETS_COUNT
+      return false, K_PLACEMENT_REASON_DESTROY_TURRETS_COUNT, K_MINIMUM_TURRETS_FOR_DESTROY
     end
     if g_state.svy.money < K_PLACEMENT_COST then
-      return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS
+      return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS, K_REMOVAL_COST
     end
-    return 2, K_PLACEMENT_REASON_DESTROY
+    return 2, K_PLACEMENT_REASON_DESTROY, K_REMOVAL_COST
   end
 
   -- check for direct collision with any other obstruction
@@ -196,13 +197,29 @@ function placement_placable()
     return false, K_PLACEMENT_REASON_BLOCKING
   end
 
-  -- check that we have sufficient money
-  if g_state.svy.money < K_PLACEMENT_COST then
-    return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS
+  local _, tree_count = board_test_collides({
+    all = true, -- need this to get accurate count
+    x=g_state.placement.x,
+    y=g_state.placement.y,
+    grid=g_state.placement.grid,
+    mask=K_TREE
+  })
+  local __, rubble_count = board_test_collides({
+    all = true, -- need this to get accurate count
+    x=g_state.placement.x,
+    y=g_state.placement.y,
+    grid=g_state.placement.grid,
+    mask=K_DECAL
+  })
+  local cost = K_PLACEMENT_COST + 3 * tree_count + rubble_count
+
+   -- check that we have sufficient money
+   if g_state.svy.money < cost then
+     return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS, cost
   end
 
   -- can be placed.
-  return 1, 0
+  return 1, 0, cost
 end
 
 -- TODO: cleanup. this is messy.
@@ -264,11 +281,12 @@ function placement_get_cache()
     cache.dirty = false
     local placable, reason, payload = placement_placable()
     if placable ~= cache.placable or reason ~= cache.reason or payload ~= cache.payload then
-      cache.confirm = false
       cache.show_message_timer = 0
       cache.placable = placable
       cache.reason = reason
       cache.payload = payload
+      cache.confirm = false
+      cache.requires_confirm = (reason == K_PLACEMENT_REASON_DESTROY) or (placable == 1 and payload > K_PLACEMENT_COST)
     end
     if cache.placable == 1 or cache.reason == K_PLACEMENT_REASON_INSUFFICIENT_FUNDS then
       board_push_temporary_change_from_grid(placement.x, placement.y, placement.grid, K_OBSTRUCTION)
@@ -353,10 +371,13 @@ function draw_placement()
   end
 
   -- implacable reason
-  if cache.placable ~= 1 then
+  if cache.placable ~= 1 or cache.confirm then
     local text = K_PLACEMENT_REASON_TEXT[cache.reason]
+    if cache.reason == K_PLACEMENT_REASON_INSUFFICIENT_FUNDS then
+      text = "$" .. tostring(cache.payload) .. " Required"
+    end
     if cache.confirm then
-      text = "Confirm?"
+      text = "Confirm: $" .. tostring(cache.payload)
     end
     local show_message = cache.show_message_timer > 0 or cache.reason == K_PLACEMENT_REASON_BLOCKING or cache.reason == K_PLACEMENT_REASON_BORDER or cache.confirm or cache.placable == 2
 
@@ -380,6 +401,7 @@ end
 
 function placement_clear()
   local placement = g_state.placement
+  local cache = g_state.placement_cache
 
   -- remove wall
   local success = board_emplace({
@@ -410,10 +432,10 @@ function placement_clear()
   effects_create_text(
     (placement.x + width2d(placement.grid) / 2) * k_dim_x,
     (placement.y + height2d(placement.grid) / 2) * k_dim_y,
-    "-$" .. tostring(K_PLACEMENT_COST)
+    "-$" .. tostring(cache.payload)
   )
 
-  g_state.svy.money = g_state.svy.money - K_PLACEMENT_COST
+  g_state.svy.money = g_state.svy.money - cache.payload
 
   -- slight effect
   camera_apply_shake(0.3, 1)
@@ -450,10 +472,10 @@ function placement_emplace()
   effects_create_text(
     (placement.x + width2d(placement.grid) / 2) * k_dim_x,
     (placement.y + height2d(placement.grid) / 2) * k_dim_y,
-    "-$" .. tostring(K_PLACEMENT_COST)
+    "-$" .. tostring(g_state.placement_cache.payload)
   )
 
-  g_state.svy.money = g_state.svy.money - K_PLACEMENT_COST
+  g_state.svy.money = g_state.svy.money - g_state.placement_cache.payload
 
   turret_emplace_potentials_at_grid(placement.x, placement.y, placement.grid, placement.dx, placement.dy)
 
@@ -519,18 +541,18 @@ function update_placement(dx, dy, dr, dt)
 
     if key_pressed("space") or key_pressed("return") then
       local cache = placement_get_cache()
-      if cache.placable == 1 then
-        placement_emplace()
-      elseif cache.placable == 2 then
-        if cache.confirm then
-          cache.confirm = false
+      if not cache.confirm and cache.requires_confirm then
+        cache.confirm = true
+      else
+        cache.confirm = false
+        if cache.placable == 1 then
+          placement_emplace()
+        elseif cache.placable == 2 then
           placement_clear()
         else
-          cache.confirm = true
+          -- show reason why it can't be placed.
+          cache.show_message_timer = 2.7
         end
-      else
-        -- show reason why it can't be placed.
-        cache.show_message_timer = 2.7
       end
     end
   end

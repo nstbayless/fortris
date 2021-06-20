@@ -66,7 +66,8 @@ function init_state()
     game_over_complete = false,
     initial_board_width = 40,
     initial_board_height = 24,
-    kills = 0
+    kills = 0,
+    paused = false,
   }
   g_state.spawnx = math.random(6, g_state.initial_board_width - 7)
   g_state.spawny = math.random(6, g_state.initial_board_height - 7)
@@ -170,8 +171,12 @@ function love.draw()
   camera_apply_transform()
 
   -- global shader
-  if g_state.game_over then
-    g_shaders.game_over:send("weight", math.clamp(g_state.game_over_timer / 2 - 0.5, 0, 0.9))
+  if g_state.game_over or g_state.paused then
+    if g_state.paused then
+      g_shaders.game_over:send("weight", 1)  
+    else
+      g_shaders.game_over:send("weight", math.clamp(g_state.game_over_timer / 2 - 0.5, 0, 0.9))
+    end
     love.graphics.setShader(g_shaders.game_over)
   else
     love.graphics.setShader()
@@ -278,7 +283,10 @@ function love.update(dt)
     end
   end
 
-  g_state.time = g_state.time + dt
+  if not g_state.paused then
+    g_state.time = g_state.time + dt
+  end
+
   if g_test_mode then
     test_update(dt)
   end
@@ -287,7 +295,14 @@ function love.update(dt)
   dy = ibool(key_pressed("down", true)) - ibool(key_pressed("up", true))
   dr = ibool(key_pressed("s")) - ibool(key_pressed("a"))
 
-  if dt > 0 then
+  if key_pressed("p") or key_pressed("escape") then
+    g_state.paused = not g_state.paused
+    if g_state.game_over then
+      g_state.paused = false
+    end
+  end
+
+  if dt > 0 and not g_state.paused then
     update_placement(dx, dy, dr, dt)
     board_rubble_decay(dt)
 

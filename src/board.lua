@@ -289,6 +289,7 @@ end
 
 -- writes values to the board, if they don't collide with another value.
 -- returns true if successful, false if fails (a collision)
+-- if 'all' is set, also returns number of obstructions
 -- x, y: the top-left coordinate to write to the board at.
 -- grid={{1}}: a 2d array of values. Every non-zero value will be written.
 -- mask: required if both cmask and wmask are not provided. cmask and wmask are set to this.
@@ -306,6 +307,7 @@ function board_emplace(opts, test)
   local grid = opts.grid or make_2d_array(opts.w or 1, opts.h or 1, 1)
   local all = not not opts.all
   local any_free = false
+  local n_obstructions = 0
   local cmask = d(opts.cmask, opts.mask, 0xffffffff) -- "compare mask"
   local wmask = tern(test, 0, d(opts.wmask, opts.mask)) -- "write mask"
   assert(wmask ~= nil, "wmask not set.")
@@ -341,11 +343,19 @@ function board_emplace(opts, test)
 
       local obstruction = bit.band(board_value, cmask) ~= cvalue and grid_value ~= 0
 
+      if (pass == 0 or opts.force) and obstruction then
+        if all then
+          n_obstructions = n_obstructions + 1
+        else
+          n_obstructions = 1
+        end
+      end
+
       if pass == 0 then
         -- first pass: check for collisions
         if obstruction then
           if not all then
-            return false
+            return false, n_obstructions
           end
         elseif grid_value ~= 0 then
           any_free = true
@@ -365,7 +375,7 @@ function board_emplace(opts, test)
     end -- iterate board
     if all and pass == 0 and not any_free then
       -- fail.
-      return false
+      return false, n_obstructions
     end
   end -- iterate pass
 
@@ -379,7 +389,7 @@ function board_emplace(opts, test)
   end
 
   -- success.
-  return true
+  return true, n_obstructions
 end
 
 -- checks if region would be free
@@ -389,7 +399,8 @@ end
 
 -- checks if region would be obstructed
 function board_test_collides(opts)
-  return not board_test_free(opts)
+  local free, amount = board_test_free(opts)
+  return (not free), amount
 end
 
 function board_push_temporary_change_from_grid(x, y, grid, mask, value)

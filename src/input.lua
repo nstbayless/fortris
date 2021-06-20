@@ -1,5 +1,5 @@
 local k_controls = {
-  "up", "down", "left", "right", "a", "s", "space", "return"
+  "up", "down", "left", "right", "a", "s", "space", "return", "p", "escape"
 }
 local K_IDX_PRESSED = 1
 local K_IDX_HELD = 2
@@ -13,6 +13,7 @@ function input_init()
 end
 
 function update_input(dt)
+  -- update each key.
   for idx, key in ipairs(k_controls) do
     g_input[key] = g_input[key] or {false, false, false}
     local prev_down = g_input[key][K_IDX_HELD]
@@ -29,6 +30,14 @@ function update_input(dt)
       g_input[key][K_IDX_PRESSED_REPEAT] = true
     else
       g_input[key][K_IDX_PRESSED_REPEAT] = g_input[key][K_IDX_PRESSED]
+    end
+
+    -- prevent undesirable behaviour where game starts with a key pressed.
+    -- note that this allows for a key to be held at the start but never 'pressed'
+    -- (watch for rolling rocks......)
+    if g_state.time - dt < 0.1 then
+      g_input[key][K_IDX_PRESSED] = false
+      g_input[key][K_IDX_PRESSED_REPEAT] = false
     end
   end
 end

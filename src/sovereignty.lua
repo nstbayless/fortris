@@ -169,7 +169,7 @@ end
 function svy_draw_spiel()
   assert(g_state.spiel_x and g_state.spiel_y)
 
-  if g_debug_mode then
+  if g_debug_mode or g_state.paused then
     return
   end
 
@@ -217,7 +217,11 @@ end
 function svy_draw_overlay()
   love.graphics.setColor(1, 1, 0.5)
 
-  -- hp and $
+  if g_state.paused then
+    local text = get_cached_text(g_font, "- PAUSED -")
+    love.graphics.draw(text, love.graphics.getWidth() / 2 - text:getWidth() / 2, love.graphics.getHeight() / 2 - text:getHeight() / 2)
+  end
+
   if g_state.game_over then
     local s = "Game Over. Press Space to restart.\n"
 
@@ -228,7 +232,7 @@ function svy_draw_overlay()
     local text = get_cached_text(g_font, s)
     
     love.graphics.draw(text, 4, 4)
-  else
+  elseif not g_state.paused then
     local s = "Treasury:$" .. tostring(g_state.svy.money) .. tern(g_state.svy.money < g_state.svy.moneycap, "", " [Limit!]")
     local text = get_cached_text(g_font, s)
     love.graphics.draw(text, 4, 4)
@@ -237,7 +241,7 @@ function svy_draw_overlay()
     s = s .. "Fortress:" .. tostring(g_state.svy.hp)
   end
 
-  if g_state.spawn_timer <= 2 or g_state.game_over_timer >= 14.5 then
+  if g_state.spawn_timer <= 2 or g_state.game_over_timer >= 14.5 or g_state.paused then
     love.graphics.printf(k_version, g_font, 0, 0, love.graphics.getWidth() - 4, "right")
   end
 
