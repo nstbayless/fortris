@@ -8,8 +8,8 @@ K_ANIMATION_WALK[3] = 20
 -- easing into and out of turn speeds (reciprocal of seconds to fully change speed)
 K_TURNING_TIMER_DEPRECIATION_RATE = 3.6
 
--- amount of damage done to an ogre when squashing them
-K_SQUASH_DAMAGE = 5
+-- portion of an ogre's hp to squash them at
+K_SQUASH_DAMAGE = 1/5
 
 local g_unit_id = 0
 
@@ -179,7 +179,7 @@ end
 function unit_splatter(id)
   local unit = unit_get(id)
   if unit then
-    if unit.squashable or unit.health <= K_SQUASH_DAMAGE then
+    if unit.squashable or unit.health <= K_SQUASH_DAMAGE * unit.healthmax then
       local gx, gy = unit_get_precise_grid_position(id)
       for i = 1,7 + math.random(5) do
         local effect = {
@@ -204,7 +204,7 @@ function unit_splatter(id)
       svy_gain_bounty(squash_bounty)
       unit_remove(id)
     else
-      unit_apply_damage(id, K_SQUASH_DAMAGE)
+      unit_apply_damage(id, K_SQUASH_DAMAGE * unit.healthmax)
     end
   end
 end
