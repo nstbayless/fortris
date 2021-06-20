@@ -223,7 +223,7 @@ function spawn_monsters(dt)
         impathable = 0, -- paths through solids
         breaker = true, -- breaks terrain
         squashable = false,
-        hp = 20 + g_state.spawn_timer / 10 + math.sqrt(g_state.spawn_timer / 100) + (math.frandom(4) - math.frandom(1)) * (1 + g_state.spawn_timer / 50),
+        hp = 30 + g_state.spawn_timer / 22 + math.sqrt(g_state.spawn_timer / 100) + math.frandom(5) + (math.frandom(4) - math.frandom(1)) * (1 + g_state.spawn_timer / 200),
         bounty = math.round(20 - math.clamp(g_state.spawn_timer / 60 - 200, 0, 5)),
       })
     end

@@ -204,14 +204,7 @@ function placement_placable()
     grid=g_state.placement.grid,
     mask=K_TREE
   })
-  local __, rubble_count = board_test_collides({
-    all = true, -- need this to get accurate count
-    x=g_state.placement.x,
-    y=g_state.placement.y,
-    grid=g_state.placement.grid,
-    mask=K_DECAL
-  })
-  local cost = K_PLACEMENT_COST + 3 * tree_count + rubble_count
+  local cost = K_PLACEMENT_COST + 3 * tree_count
 
    -- check that we have sufficient money
    if g_state.svy.money < cost then
@@ -286,7 +279,7 @@ function placement_get_cache()
       cache.reason = reason
       cache.payload = payload
       cache.confirm = false
-      cache.requires_confirm = (reason == K_PLACEMENT_REASON_DESTROY) or (placable == 1 and payload > K_PLACEMENT_COST)
+      cache.requires_confirm = (reason == K_PLACEMENT_REASON_DESTROY)
     end
     if cache.placable == 1 or cache.reason == K_PLACEMENT_REASON_INSUFFICIENT_FUNDS then
       board_push_temporary_change_from_grid(placement.x, placement.y, placement.grid, K_OBSTRUCTION)
@@ -371,15 +364,20 @@ function draw_placement()
   end
 
   -- implacable reason
-  if cache.placable ~= 1 or cache.confirm then
+  if cache.placable ~= 1 or cache.confirm or (cache.placable == 1 and cache.payload > K_PLACEMENT_COST) then
     local text = K_PLACEMENT_REASON_TEXT[cache.reason]
+    local glow = true
     if cache.reason == K_PLACEMENT_REASON_INSUFFICIENT_FUNDS then
       text = "$" .. tostring(cache.payload) .. " Required"
+    end
+    if (cache.placable == 1) and cache.payload > K_PLACEMENT_COST then
+      text = "$" .. tostring(cache.payload)
+      glow = false
     end
     if cache.confirm then
       text = "Confirm: $" .. tostring(cache.payload)
     end
-    local show_message = cache.show_message_timer > 0 or cache.reason == K_PLACEMENT_REASON_BLOCKING or cache.reason == K_PLACEMENT_REASON_BORDER or cache.confirm or cache.placable == 2
+    local show_message = cache.show_message_timer > 0 or cache.reason == K_PLACEMENT_REASON_BLOCKING or cache.reason == K_PLACEMENT_REASON_BORDER or cache.confirm or cache.placable == 2 or (cache.placable == 1 and cache.payload > K_PLACEMENT_COST)
 
     -- placement failure reason
     if text and show_message then
@@ -388,7 +386,7 @@ function draw_placement()
       local coordx = k_dim_x * (placement.x + width2d(placement.grid) / 2) - text_width / 2
       local coordy = k_dim_x * (placement.y + height2d(placement.grid) / 2) - text_height / 2
 
-      love.graphics.setColor(0, 0, 0, 0.6 + math.sin(g_state.time * 6) * 0.2)
+      love.graphics.setColor(0, 0, 0, 0.6 + math.sin(g_state.time * 6) * tern(glow, 0.2, 0.02))
       love.graphics.rectangle("fill", coordx, coordy, text_width, text_height)
 
       love.graphics.setColor(1, 0.8, 0.6, 0.9)
