@@ -51,9 +51,10 @@ end
 function camera_apply_transform()
   local offx, offy = 0, 0
   local camera = g_state.camera
-  if camera.shake_timer > 0 then
-    offx = offx + math.frandom(-camera.shake_x, camera.shake_x)
-    offy = offy + math.frandom(-camera.shake_y, camera.shake_y)
+  local game_over_shake_multiplier = math.clamp(1 - g_state.game_over_timer / 2, 0, 1)
+  if camera.shake_timer > 0 and game_over_shake_multiplier > 0 then
+    offx = offx + math.frandom(-camera.shake_x, camera.shake_x) * game_over_shake_multiplier
+    offy = offy + math.frandom(-camera.shake_y, camera.shake_y) * game_over_shake_multiplier
   end
   love.graphics.translate(math.round(-camera.x * k_dim_x + offx), math.round(-camera.y * k_dim_y + offy))
 end

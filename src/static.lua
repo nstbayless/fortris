@@ -5,6 +5,8 @@ local g_next_static_id = 0
 function static_init()
   g_state.statics = {
   }
+  g_state.statics_count = {
+  }
 end
 
 function static_update_all(dt)
@@ -98,8 +100,13 @@ function static_emplace(opt)
     destroyable = opt.destroyable or true,
     props = opt.props or {}, -- user-defined properties
     fn_update = opt.fn_update or nil,
-    id = id
+    id = id,
+    tags = opt.tags or {}
   }
+
+  for _, tag in ipairs(static.tags) do
+    g_state.statics_count[tag] = d(g_state.statics_count[tag], 0) + 1
+  end
 
   -- clear fog of war
   local fog_clear_radius = 3 or opt.fog_clear_radius
@@ -155,9 +162,22 @@ function static_iterate()
   return pairs(g_state.statics)
 end
 
+function static_destroy_at(x, y)
+  local static = static_at(x, y)
+  if static and static_get(static) and static_get(static).destroyable then
+    static_remove(static)
+    return true
+  end
+  return false
+end
+
 function static_remove(id)
   local static = g_state.statics[id]
   if static ~= nil then
+    for _, tag in ipairs(static.tags) do
+      g_state.statics_count[tag] = d(g_state.statics_count[tag], 0) - 1
+    end
+
     -- remove static from board.
     board_emplace({
       x = static.x,

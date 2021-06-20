@@ -419,12 +419,7 @@ function unit_update(id, dt)
           })
 
           -- remove any statics such as turrets
-          local static = static_at(x, y)
-          local static_removed = false
-          if static and static_get(static) and static_get(static).destroyable then
-            static_remove(static)
-            static_removed = true
-          end
+          local static_removed = static_destroy_at(x, y)
 
           -- this is done to briefly slow the unit.
           -- TODO: more significant effect here.

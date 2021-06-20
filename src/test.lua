@@ -18,7 +18,7 @@ function test_get_key_down(key)
     if key == "up" or key == "down" or key == "left" or key == "right" then
       -- move faster when not placable in order to return to placable region more quickly
       if not g_state.placement_cache.placable then
-        if g_state.placement_cache.implacable_reason == K_PLACEMENT_REASON_SHROUD then
+        if g_state.placement_cache.reason == K_PLACEMENT_REASON_SHROUD then
           if (key == "down" and g_state.placement.y < g_state.spawny) or
             (key == "up" and g_state.placement.y > g_state.spawny) or
             (key == "right" and g_state.placement.x < g_state.spawnx) or

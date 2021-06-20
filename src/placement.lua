@@ -79,7 +79,8 @@ function init_placement()
     show_message_timer = 0,
     placable = false,
     implacable_reason = 1,
-    turret_potentials = {}
+    turret_potentials = {},
+    confirm = false
   }
   next_placement(true)
 
@@ -112,21 +113,28 @@ function placement_height()
   return h
 end
 
+K_MINIMUM_TURRETS_FOR_DESTROY = 4
+
 K_PLACEMENT_REASON_INSUFFICIENT_FUNDS = 1
 K_PLACEMENT_REASON_OBSTRUCTION = 2
 K_PLACEMENT_REASON_BLOCKING = 3
 K_PLACEMENT_REASON_SHROUD = 4
 K_PLACEMENT_REASON_BORDER = 5
+K_PLACEMENT_REASON_DESTROY = 6
+K_PLACEMENT_REASON_DESTROY_TURRETS_COUNT = 7
 
 K_PLACEMENT_REASON_TEXT = {
   "$" .. tostring(K_PLACEMENT_COST) .. " Required",
   "Obstructed",
   "Blocking!",
   "Shroud",
-  "Edge"
+  "Edge",
+  "Destroy",
+  "Need " .. tostring(K_MINIMUM_TURRETS_FOR_DESTROY) .. " Turrets First"
 }
 
--- returns true if current placement could be validly emplaced at its current location.
+-- returns 1 if current placement could be validly emplaced at its current location,
+-- and 2 if the piece should remove underlying wall instead.
 -- also returns a 'reason'
 function placement_placable()
   local placement = g_state.placement
@@ -149,6 +157,24 @@ function placement_placable()
     if v ~= 0 and board_tile_is_border(x + g_state.placement.x, y + g_state.placement.y) then
       return false, K_PLACEMENT_REASON_BORDER
     end
+  end
+
+  -- check for fully overlapping a structure
+  if board_test_free({
+    x=g_state.placement.x,
+    y=g_state.placement.y,
+    grid=g_state.placement.grid,
+    mask=K_WALL,
+    cvalue = K_WALL
+  }) then
+    -- check that we have sufficient money
+    if not g_debug_mode and g_state.statics_count["turret"] < K_MINIMUM_TURRETS_FOR_DESTROY then
+      return false, K_PLACEMENT_REASON_DESTROY_TURRETS_COUNT
+    end
+    if g_state.svy.money < K_PLACEMENT_COST then
+      return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS
+    end
+    return 2, K_PLACEMENT_REASON_DESTROY
   end
 
   -- check for direct collision with any other obstruction
@@ -176,7 +202,7 @@ function placement_placable()
   end
 
   -- can be placed.
-  return true, 0
+  return 1, 0
 end
 
 -- TODO: cleanup. this is messy.
@@ -227,7 +253,7 @@ function next_placement(is_first_placement)
   }
   -- rotate randomly
   rotate_placement(math.random(4))
-  g_state.placement_cache.dirty = true
+  placement_set_dirty()
 end
 
 -- returns cache; refreshes cache if necessary
@@ -236,8 +262,15 @@ function placement_get_cache()
   local placement = g_state.placement
   if cache.dirty then
     cache.dirty = false
-    cache.placable, cache.implacable_reason = placement_placable()
-    if cache.placable or cache.implacable_reason == K_PLACEMENT_REASON_INSUFFICIENT_FUNDS then
+    local placable, reason, payload = placement_placable()
+    if placable ~= cache.placable or reason ~= cache.reason or payload ~= cache.payload then
+      cache.confirm = false
+      cache.show_message_timer = 0
+      cache.placable = placable
+      cache.reason = reason
+      cache.payload = payload
+    end
+    if cache.placable == 1 or cache.reason == K_PLACEMENT_REASON_INSUFFICIENT_FUNDS then
       board_push_temporary_change_from_grid(placement.x, placement.y, placement.grid, K_OBSTRUCTION)
       cache.turret_potentials = turret_get_potentials_at_grid(
         placement.x, placement.y, placement.grid, placement.dx, placement.dy
@@ -260,10 +293,16 @@ function draw_placement()
     local image = g_images.blocks[placement.color]
     if not cache.placable then
       -- change block color
-      image = ({g_images.blocks.gray, g_images.blocks.red2, g_images.blocks.darkgray, g_images.blocks.red, g_images.blocks.red})[cache.implacable_reason]
+      image = ({g_images.blocks.gray, g_images.blocks.red2, g_images.blocks.darkgray, g_images.blocks.red, g_images.blocks.red, g_images.blocks.red, g_images.blocks.red})[cache.reason]
 
       -- render blocks semitransparent
       love.graphics.setColor(1, 1, 1, 0.5)
+    end
+    if cache.placable == 2 then
+      -- 'removal' mode
+      image = g_images.blocks.white
+
+      love.graphics.setColor(0.91, 1, 0.9, 0.85)
     end
     for y, x, v in array_2d_iterate(placement.grid, 0) do
       if v ~= 0 then
@@ -274,7 +313,7 @@ function draw_placement()
     end
 
     -- turret previews
-    if cache.placable or cache.implacable_reason == K_PLACEMENT_REASON_INSUFFICIENT_FUNDS then
+    if cache.placable or cache.reason == K_PLACEMENT_REASON_INSUFFICIENT_FUNDS then
       -- show new turrets
       love.graphics.setColor(1, 1, 1, tern(cache.placable, 0.3 + 0.2 * (math.floor(g_state.time * 10) % 2), 0.28))
       for idx, turret in pairs(cache.turret_potentials) do
@@ -314,9 +353,12 @@ function draw_placement()
   end
 
   -- implacable reason
-  if not cache.placable then
-    local text = K_PLACEMENT_REASON_TEXT[cache.implacable_reason]
-    local show_message = cache.show_message_timer > 0 or cache.implacable_reason == K_PLACEMENT_REASON_BLOCKING or cache.implacable_reason == K_PLACEMENT_REASON_BORDER
+  if cache.placable ~= 1 then
+    local text = K_PLACEMENT_REASON_TEXT[cache.reason]
+    if cache.confirm then
+      text = "Confirm?"
+    end
+    local show_message = cache.show_message_timer > 0 or cache.reason == K_PLACEMENT_REASON_BLOCKING or cache.reason == K_PLACEMENT_REASON_BORDER or cache.confirm or cache.placable == 2
 
     -- placement failure reason
     if text and show_message then
@@ -334,6 +376,49 @@ function draw_placement()
   end
 
   love.graphics.setColor(1, 1, 1, 1)
+end
+
+function placement_clear()
+  local placement = g_state.placement
+
+  -- remove wall
+  local success = board_emplace({
+    x=g_state.placement.x,
+    y=g_state.placement.y,
+    grid=g_state.placement.grid,
+
+    -- all board values must be wall
+    all = true,
+    cmask=K_WALL,
+    cvalue = K_WALL,
+
+    -- write zero to those spaces
+    wmask = K_WALL,
+    value = 0
+  })
+  assert(success)
+
+  -- remove turrets
+  for yo, xo, v in array_2d_iterate(g_state.placement.grid, 0) do
+    if v ~= 0 then
+      local removed = static_destroy_at(xo + g_state.placement.x, yo + g_state.placement.y)
+      print("remove:", xo, yo, removed)
+    end
+  end
+
+  -- money cost effect
+  effects_create_text(
+    (placement.x + width2d(placement.grid) / 2) * k_dim_x,
+    (placement.y + height2d(placement.grid) / 2) * k_dim_y,
+    "-$" .. tostring(K_PLACEMENT_COST)
+  )
+
+  g_state.svy.money = g_state.svy.money - K_PLACEMENT_COST
+
+  -- slight effect
+  camera_apply_shake(0.3, 1)
+
+  next_placement()
 end
 
 function placement_emplace()
@@ -381,6 +466,14 @@ function placement_emplace()
   next_placement()
 end
 
+function placement_set_dirty(reset_placement_ui)
+  g_state.placement_cache.dirty = true
+  if reset_placement_ui then
+    g_state.placement_cache.confirm = false
+    g_state.placement_cache.show_message_timer = 0
+  end
+end
+
 function rotate_placement(dr, placement)
   local placement = placement or g_state.placement
   for iter = 1,(math.abs(dr) % 4) do
@@ -420,16 +513,24 @@ function update_placement(dx, dy, dr, dt)
     -- update placement only if any actual change was made.
     if dr ~= 0 or dx ~= 0 or dy ~= 0 then
       g_state.placement = proposed_placement
-      g_state.placement_cache.dirty = true
-      g_state.placement_cache.show_message_timer = 0
+      placement_set_dirty(true)
+      g_state.placement.show_message_timer = 0
     end
 
     if key_pressed("space") or key_pressed("return") then
-      if placement_placable() then
+      local cache = placement_get_cache()
+      if cache.placable == 1 then
         placement_emplace()
+      elseif cache.placable == 2 then
+        if cache.confirm then
+          cache.confirm = false
+          placement_clear()
+        else
+          cache.confirm = true
+        end
       else
         -- show reason why it can't be placed.
-        g_state.placement_cache.show_message_timer = 2.7
+        cache.show_message_timer = 2.7
       end
     end
   end

@@ -295,6 +295,7 @@ end
 -- cmask: if not nil, then only check and overwrite the masked bits of the board.
 -- wmask: if not nil, then overwrite only these bits (rather than mask).
 -- value: if not nil, then write this value instead of whatever is in the grid. Must be a subset of wmask. (Allows grid to be simple 0/1)
+-- cvalue: if set, the existing value (masked by cmask) must equal this.
 -- bounds: if set, then treat regions outside of the board as though they have this value. (default: cannot place outside board)
 -- all: if set, only fail if all possible locations collide.
 -- force: apply without checking
@@ -309,6 +310,7 @@ function board_emplace(opts, test)
   local wmask = tern(test, 0, d(opts.wmask, opts.mask)) -- "write mask"
   assert(wmask ~= nil, "wmask not set.")
   local value = opts.value or opts.wmask
+  local cvalue = opts.cvalue or 0
   assert(test or value ~= nil, "value must be supplied")
   local bounds = opts.bounds
   if value ~= nil and not test then
@@ -337,7 +339,7 @@ function board_emplace(opts, test)
         board_value = board_get_value(x, y)
       end
 
-      local obstruction = bit.band(board_value, cmask) ~= 0 and grid_value ~= 0
+      local obstruction = bit.band(board_value, cmask) ~= cvalue and grid_value ~= 0
 
       if pass == 0 then
         -- first pass: check for collisions

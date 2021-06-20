@@ -30,7 +30,7 @@ function svy_gain_bounty(amount)
 
     -- TODO -- make this by observer.
     -- (placement cache depends on whether or not there are enough funds for the blocks)
-    g_state.placement_cache.dirty = true
+    placement_set_dirty()
   end
 end
 

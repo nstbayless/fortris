@@ -208,7 +208,8 @@ function turret_emplace_potentials_at_grid(x, y, grid, dx, dy)
       collision_flags = K_STATIC,
       sprites = sprites,
       fn_update = turret_update,
-      props = props
+      props = props,
+      tags = {"turret"}
     })
   end
 end
