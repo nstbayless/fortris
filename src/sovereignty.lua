@@ -18,6 +18,7 @@ function svy_init()
     money = tern(g_debug_mode, 300, 36),
     moneycap = 100,
     hp = 10,
+    hpmax = 10
   }
 end
 

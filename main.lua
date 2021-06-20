@@ -58,6 +58,8 @@ function init_state()
     time = 0,
     spawn_rate = 1/5,
     spawn_progress = 0.5,
+    heal_timer = 0,
+    heal_rate = 1/21,
     ogre_spawn_rate = 1/80,
     ogre_spawn_progress = tern(g_debug_mode, 1, -1),
     spawn_timer = 0,
@@ -285,6 +287,15 @@ function love.update(dt)
 
   if not g_state.paused then
     g_state.time = g_state.time + dt
+    if g_state.svy.hp < g_state.svy.hpmax then
+      g_state.heal_timer = g_state.heal_timer + dt * g_state.heal_rate
+      if g_state.heal_timer > 1 then
+        g_state.heal_timer = g_state.heal_timer - 1
+        g_state.svy.hp = g_state.svy.hp + 1
+      end
+    else
+      g_state.svy.heal_timer = 0
+    end
   end
 
   if g_test_mode then
