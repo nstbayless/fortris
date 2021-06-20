@@ -205,7 +205,7 @@ function turret_emplace_potentials_at_grid(x, y, grid, dx, dy)
       w = potential.size,
       h = potential.size,
       wall_obstacle = true,
-      fog_clear_radius = 4,
+      fog_clear_radius = 2 * potential.size,
       fog_clear_circle = true,
       collision_flags = K_STATIC,
       sprites = sprites,
