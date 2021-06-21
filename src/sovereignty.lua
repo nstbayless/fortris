@@ -240,6 +240,14 @@ function svy_draw_overlay()
     text = get_cached_text(g_font, "Fortress:" .. tostring(g_state.svy.hp))
     love.graphics.draw(text, 4, 30)
     s = s .. "Fortress:" .. tostring(g_state.svy.hp)
+
+    -- queue
+    if g_state.full_feature then
+      draw_placement_queue(32, 94, 4, 12)
+
+      -- swap
+      draw_placement_swap(94, 94, 14)
+    end
   end
 
   if g_state.spawn_timer <= 2 or g_state.game_over_timer >= 14.5 or g_state.paused then

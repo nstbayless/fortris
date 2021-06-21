@@ -72,8 +72,9 @@ local K_PLACEMENTS = {
 
 function init_placement()
   g_state.placement_idx = nil
-  g_state.placement_permutation = {}
-  g_state.placement_count = -1
+  g_state.placement_queue = {}
+  g_state.placement_count = 0
+  g_state.placement_swap = nil
   g_state.placement_rotation_count = 0
   g_state.placement_cache = {
     dirty = true,
@@ -83,13 +84,38 @@ function init_placement()
     turret_potentials = {},
     confirm = false
   }
-  next_placement(true)
+  next_placement()
 
   board_observe(
     function() 
       g_state.placement_cache.dirty = true
     end
   )
+end
+
+function peek_placement(idx)
+  idx = idx or 0
+  while #g_state.placement_queue <= idx do
+    local add = shuffle(iota(#K_PLACEMENTS))
+
+    -- ensure square appears at start of the game
+    if g_state.placement_count == 0 and #g_state.placement_queue == 0 then
+      table.swap(add, math.random(2, 3), indexof(add, 2))
+    end
+
+    -- add
+    for _, v in ipairs(add) do
+      g_state.placement_queue[#g_state.placement_queue + 1] = v
+    end
+  end
+
+  return g_state.placement_queue[idx + 1]
+end
+
+function pop_placement()
+  local i = peek_placement(0)
+  table.remove(g_state.placement_queue, 1)
+  return i
 end
 
 -- returns height, width of placement
@@ -105,12 +131,12 @@ function placement_dimensions()
 end
 
 function placement_width()
-  local h, w = placement_dimensions()
+  local w, h = placement_dimensions()
   return w
 end
 
 function placement_height()
-  local h, w = placement_dimensions()
+  local w, h = placement_dimensions()
   return h
 end
 
@@ -216,23 +242,28 @@ function placement_placable()
 end
 
 -- TODO: cleanup. this is messy.
-function next_placement(is_first_placement)
-  if g_state.placement_idx == nil or g_state.placement_idx >= #K_PLACEMENTS then
-    g_state.placement_idx = 0
-    g_state.placement_permutation = shuffle(iota(#K_PLACEMENTS))
-
-    -- first placement: guarantee that a square block is in either second or third spot.
-    -- (this ensures a turret will be placed)
-    if is_first_placement then
-      table.swap(g_state.placement_permutation, math.random(2, 3), indexof(g_state.placement_permutation, 2))
-    end
-  end
+function next_placement()
+  local base = K_PLACEMENTS[pop_placement()]
   g_state.placement_count = g_state.placement_count + 1
-  local idx = g_state.placement_idx
-  g_state.placement_idx = idx + 1
-  local base = K_PLACEMENTS[g_state.placement_permutation[idx + 1]]
   assert(base)
   assert(base.grid ~= nil)
+  
+  set_placement({
+    type = "block",
+    color = indexof(k_block_colors, base.color),
+    grid = base.grid,
+
+    -- direction turrets will be laid / 'facing'
+    dx = 1,
+    dy = 1
+  })
+
+  -- rotate randomly
+  rotate_placement(math.random(4))
+  placement_set_dirty()
+end
+
+function set_placement(placement)
 
   local x, y = 0, 0
   -- select good default location
@@ -245,24 +276,15 @@ function next_placement(is_first_placement)
     local default_x, default_y = g_state.spawnx + spawn_offset_y, g_state.spawny + spawn_offset_x
     x = default_x
     y = default_y
+  else
+    x = g_state.placement.x + math.floor(placement_width() / 2)
+    y = g_state.placement.y + math.floor(placement_height() / 2)
   end
-  if g_state.placement then
-    x = g_state.placement.x + placement_width() / 2
-    y = g_state.placement.y + placement_height() / 2
-  end
-  g_state.placement = {
-    type = "block",
-    x = math.floor(x - width2d(base.grid) / 2),
-    y = math.floor(y - height2d(base.grid) / 2),
-    color = indexof(k_block_colors, base.color),
-    grid = base.grid,
 
-    -- direction turrets will be laid / 'facing'
-    dx = 1,
-    dy = 1
-  }
-  -- rotate randomly
-  rotate_placement(math.random(4))
+  placement.x = x - math.floor(width2d(placement.grid) / 2)
+  placement.y = y - math.floor(height2d(placement.grid) / 2)
+  g_state.placement = placement
+
   placement_set_dirty()
 end
 
@@ -295,6 +317,67 @@ function placement_get_cache()
 end
 
 local K_TURRET_VIEW_OBSTRUCTION_RADIUS = 3.5
+
+function draw_placement_preview_centred(placement, x, y, s)
+  s = s or 16
+  local w = width2d(placement.grid)
+  local h = height2d(placement.grid)
+  local img = g_images.blocks[placement.color]
+  local imgw, imgh = img:getDimensions()
+  for yo, xo, v in array_2d_iterate(placement.grid, 0) do
+    if v ~= 0 then
+      local vx = x + (xo - w/2) * s - s/2
+      local vy = y + (yo - h/2) * s - s/2
+      love.graphics.draw(img, vx, vy, 0, s / imgw, s / imgh)
+    end
+  end
+end
+
+function draw_placement_queue(x, y, n, s)
+  local p = math.clamp(g_state.full_feature_timer, 0, 1)
+  love.graphics.push_opts()
+  local a = 0.9
+  s = s or 16
+  n = n or 4
+  for i = 0,n-1 do
+    love.graphics.setColor(1, 1, 1, math.clamp(a - 1 + p, 0, 1))
+    local placement = K_PLACEMENTS[peek_placement(i)]
+    draw_placement_preview_centred(placement, x, y, s)
+    y = y + s * 4
+    s = s * 0.9
+    a = a * 0.8
+  end
+  love.graphics.pop_opts()
+end
+
+function draw_placement_swap(x, y, s)
+  love.graphics.push_opts()
+
+  local p = math.clamp(g_state.full_feature_timer, 0, 1)
+  local boxsize = s * 4 + 9
+  for i = 0,1 do
+    if i == 1 then
+      love.graphics.setColor(1, 1, 1, p)
+    else
+      love.graphics.setColor(0, 0, 0, 0.6 * p)
+    end
+
+    love.graphics.rectangle(tern(i == 0, "fill", "line"), x - boxsize/2, y - boxsize/2, boxsize, boxsize)
+  end
+
+  love.graphics.setColor(1, 1, 1, 0.8 * p)
+  if g_state.placement_swap then
+    draw_placement_preview_centred(g_state.placement_swap, x + s / 2, y + s / 2, s or 16)
+  else
+    local text = get_cached_text(g_font_msg, "[Swap]")
+    love.graphics.draw(text, x + s / 2 - text:getWidth() / 2 - 6, y - s/3 - text:getHeight() / 2)
+  end
+
+  local text = get_cached_text(g_font_msg, "Press T")
+  love.graphics.draw(text, x + s / 2 - text:getWidth() / 2 - 6, y + s + 8 - text:getHeight() / 2)
+
+  love.graphics.pop_opts()
+end
 
 function draw_placement()
   love.graphics.setColor(1, 1, 1, 0.8)
@@ -508,10 +591,22 @@ function rotate_placement(dr, placement)
   end
 end
 
-function update_placement(dx, dy, dr, dt)
+function placement_swap()
+  local placement = g_state.placement
+  if g_state.placement_swap then
+    set_placement(g_state.placement_swap)
+  else
+    next_placement()
+  end
+  g_state.placement_swap = placement
+end
+
+function update_placement(dt)
   if g_state.placement_cache.show_message_timer > 0 then
     g_state.placement_cache.show_message_timer = g_state.placement_cache.show_message_timer - dt
   end
+
+  local dx, dy, dr = g_input_state.dx, g_input_state.dy, g_input_state.dr
 
   if g_state.placement then
     local proposed_placement = table.clone(g_state.placement)
@@ -535,6 +630,10 @@ function update_placement(dx, dy, dr, dt)
       g_state.placement = proposed_placement
       placement_set_dirty(true)
       g_state.placement.show_message_timer = 0
+    end
+    
+    if key_pressed("t") or key_pressed("tab") then
+      placement_swap()
     end
 
     if key_pressed("space") or key_pressed("return") then

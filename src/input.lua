@@ -1,5 +1,5 @@
 local k_controls = {
-  "up", "down", "left", "right", "a", "s", "space", "return", "p", "escape"
+  "up", "down", "left", "right", "a", "s", "space", "return", "p", "escape", "t", "tab"
 }
 local K_IDX_PRESSED = 1
 local K_IDX_HELD = 2
@@ -10,6 +10,11 @@ local g_input = {}
 
 function input_init()
   g_input = {}
+  g_input_state = {
+    dx = 0,
+    dy = 0,
+    dr = 0
+  }
 end
 
 function update_input(dt)
@@ -40,6 +45,10 @@ function update_input(dt)
       g_input[key][K_IDX_PRESSED_REPEAT] = false
     end
   end
+
+  g_input_state.dx = ibool(key_pressed("right", true)) - ibool(key_pressed("left", true))
+  g_input_state.dy = ibool(key_pressed("down", true)) - ibool(key_pressed("up", true))
+  g_input_state.dr = ibool(key_pressed("s")) - ibool(key_pressed("a"))
 end
 
 function key_held(name)

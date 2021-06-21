@@ -63,6 +63,8 @@ function init_state()
     ogre_spawn_rate = 1/80,
     ogre_spawn_progress = tern(g_debug_mode, 1, -1),
     spawn_timer = 0,
+    full_feature_timer = 0,
+    full_feature = false,
     game_over = false,
     game_over_timer = 0,
     game_over_complete = false,
@@ -287,6 +289,14 @@ function love.update(dt)
 
   if not g_state.paused then
     g_state.time = g_state.time + dt
+
+    -- full feature timer
+    if g_state.placement_count > 4 then
+      g_state.full_feature_timer = g_state.full_feature_timer + dt
+      g_state.full_feature = true
+    end
+
+    -- healing
     if g_state.svy.hp < g_state.svy.hpmax then
       g_state.heal_timer = g_state.heal_timer + dt * g_state.heal_rate
       if g_state.heal_timer > 1 then
@@ -302,9 +312,6 @@ function love.update(dt)
     test_update(dt)
   end
   update_input(dt)
-  dx = ibool(key_pressed("right", true)) - ibool(key_pressed("left", true))
-  dy = ibool(key_pressed("down", true)) - ibool(key_pressed("up", true))
-  dr = ibool(key_pressed("s")) - ibool(key_pressed("a"))
 
   if key_pressed("p") or key_pressed("escape") then
     g_state.paused = not g_state.paused
@@ -314,7 +321,7 @@ function love.update(dt)
   end
 
   if dt > 0 and not g_state.paused then
-    update_placement(dx, dy, dr, dt)
+    update_placement(dt)
     board_rubble_decay(dt)
 
     spawn_monsters(dt)
