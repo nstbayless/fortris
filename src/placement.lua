@@ -633,7 +633,9 @@ function update_placement(dt)
     end
     
     if key_pressed("t") or key_pressed("tab") then
-      placement_swap()
+      if g_state.full_feature then
+        placement_swap()
+      end
     end
 
     if key_pressed("space") or key_pressed("return") then

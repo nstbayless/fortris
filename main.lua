@@ -4,18 +4,17 @@ if arg[#arg] == "vsc_debug" then require("lldebugger").start() end
 -- operating system
 g_os = love.system.getOS()
 
--- paranoia / future-proofing
+-- paranoia / future-proofing against love.js changes...
 g_is_web = g_os:lower() == "web" or g_os:lower() == "browser" or g_os:lower() == "firefox" or g_os:lower() == "chrome" or g_os:lower() == "emscripten"
 
--- match library
+if g_is_web then
+  -- JavaScript ffi
+  require("ext.js")
+end
+
+-- supply missing library if needed
 if not bit then
-  if bit32 then
-    bit = bit32
-  elseif bit64 then
-    bit = bit64
-  else
-    bit = require("bitop.funcs")
-  end
+  bit = require("bitop.funcs")
   assert(bit.band and bit.bnot and bit.bor)
 end
 
@@ -38,6 +37,8 @@ g_show_existing_turrets_when_placing = false
 
 require("src.util")
 require("src.clargs")
+require("src.filesystem")
+require("src.demo")
 require("src.misc")
 require("src.input")
 require("src.pathfinding")
@@ -54,6 +55,20 @@ require("src.board_graphics")
 require("src.test")
 
 function init_state()
+  -- demo and rng can affect everything, so they are init'd first.
+  if g_load_demo then
+    local contents, size = love.filesystem.read(g_load_demo)
+    assert(contents, "error loading demo file " .. g_load_demo) 
+    print("demo file loaded, " .. tostring(size) .. " bytes")
+    demo_init(contents)
+  else
+    demo_init()
+  end
+  rng_init()
+
+  -- essentially the whole game state is stored in this table,
+  -- not including certain caches and fully-encapsulated (and re-initializable) module state
+  -- and certain configuration values.
   g_state = {
     time = 0,
     spawn_rate = 1/5,
@@ -95,18 +110,30 @@ function init_state()
   end
 end
 
-function love.load()
-  if g_seed == nil then
-    g_seed = math.floor(math.abs(os.time()))
-    print("seed: " .. HX(g_seed, 8))
+function rng_init()
+  if demo_is_playback() then
+    g_seed = demo_getv("seed")
+    print("seed: " .. HX(g_seed, 8) .. " (set by demo)")
   else
-    print("seed: " .. HX(g_seed, 8) .. " (set by user)")
+    if g_seed == nil then
+      g_seed = math.floor(math.abs(os.time()))
+      print("seed: " .. HX(g_seed, 8))
+    else
+      print("seed: " .. HX(g_seed, 8) .. " (set by user)")
+    end
+
+    demo_setv("seed", g_seed)
   end
+
   math.randomseed(g_seed)
   -- gain some randomness by throwing out some random numbers.
   for i = 1,100 + math.random(100) do
     math.random()
   end
+end
+
+function love.load()
+  math.randomseed(0)
   g_shaders.game_over = love.graphics.newShader("resources/shaders/game_over.shader")
 
   love.graphics.setDefaultFilter("linear", "nearest")
@@ -268,8 +295,25 @@ end
 
 function love.update(dt)
 
+  -- round dt to power of 2 of a second
+  -- this ensures it has a simple representation as a floating point number.
+  -- (prevents certain classes of bugs)
+  -- TODO: round randomly by frac, but without alerting demo...
+  dt = math.round(dt * 4096) / 4096
+
+  if dt == 0 then
+    return
+  end
+
+  demo_advance()
+  demo_setv("dt", dt)
+  if demo_is_playback() then
+    dt = demo_getv("dt")
+    assert(dt)
+  end
+
   -- cap if extreme lag
-  dt = math.min(dt, 1)
+  dt = math.min(dt, 0.37)
 
   if g_state.game_over then
     g_state.game_over_timer = g_state.game_over_timer + dt
@@ -330,4 +374,8 @@ function love.update(dt)
     unit_update_all(dt)
   end
   camera_update(dt)
+
+  if demo_is_recording() and key_pressed("i") then
+    demo_save()
+  end
 end

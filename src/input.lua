@@ -1,10 +1,13 @@
 local k_controls = {
-  "up", "down", "left", "right", "a", "s", "space", "return", "p", "escape", "t", "tab"
+  "up", "down", "left", "right", "a", "s", "space", "return", "p", "escape", "t", "tab", "i"
 }
 local K_IDX_PRESSED = 1
 local K_IDX_HELD = 2
 local K_IDX_RELEASED = 3
-K_IDX_PRESSED_REPEAT = 4
+local K_IDX_PRESSED_REPEAT = 4
+-- these are set to true between frames if a keypress event is detected
+local K_IDX_PRE_PRESSED = 5
+local K_IDX_PRE_RELEASED = 6
 
 local g_input = {}
 
@@ -17,18 +20,35 @@ function input_init()
   }
 end
 
+function love.keypressed( key, scancode, isrepeat )
+  if not isrepeat then
+    d(g_input[key], {})[K_IDX_PRE_PRESSED] = true
+  end
+end
+
+function love.keyreleased( key, scancode )
+  d(g_input[key], {})[K_IDX_PRE_RELEASED] = true
+end
+
 function update_input(dt)
   -- update each key.
   for idx, key in ipairs(k_controls) do
-    g_input[key] = g_input[key] or {false, false, false}
+    g_input[key] = g_input[key] or {false, false, false, false, false, false}
     local prev_down = g_input[key][K_IDX_HELD]
-    local down = love.keyboard.isDown(key)
+    local down = demo_is_playback() and
+      demo_getv("keydown_" .. key) or
+      (love.keyboard.isDown(key) and not g_input[key][K_IDX_PRE_RELEASED]) or g_input[key][K_IDX_PRE_PRESSED]
+    if demo_is_recording() then
+      demo_setv("keydown_" .. key, down)
+    end
     if g_test_mode then
       down = test_get_key_down(key)
     end
     g_input[key][K_IDX_PRESSED] = down and not prev_down
     g_input[key][K_IDX_HELD] = down
     g_input[key][K_IDX_RELEASED] = prev_down and not down
+    g_input[key][K_IDX_PRE_PRESSED] = false
+    g_input[key][K_IDX_PRE_RELEASED] = false
     g_input[key].hold_time = (not down or not g_input[key].hold_time) and 0 or (g_input[key].hold_time + dt)
     if g_input[key].hold_time > k_hold_repeat_input_initial then
       g_input[key].hold_time = g_input[key].hold_time - k_hold_repeat_input_repeat

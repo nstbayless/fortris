@@ -251,7 +251,11 @@ function svy_draw_overlay()
   end
 
   if g_state.spawn_timer <= 2 or g_state.game_over_timer >= 14.5 or g_state.paused then
-    love.graphics.printf(k_version, g_font, 0, 0, love.graphics.getWidth() - 4, "right")
+    love.graphics.printf(k_version, g_font, 0, 4, love.graphics.getWidth() - 4, "right")
+
+    if g_state.game_over_timer >= 25 then
+      love.graphics.printf("Press 'I' to save replay", g_font, 0, 30, love.graphics.getWidth() - 4, "right")
+    end
   end
 
   love.graphics.setColor(1, 1, 1)

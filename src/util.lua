@@ -1,3 +1,5 @@
+local luatexts = require("ext.luatexts")
+
 function table.clone(orig)
   local orig_type = type(orig)
   local copy
@@ -486,4 +488,28 @@ function poisson(t, r)
     end
   end
   return maxcalc + 1
+end
+
+-- http://www.unendli.ch/posts/2016-07-22-enumerations-in-lua.html
+function enum(tbl)
+  local length = #tbl
+  for i = 1, length do
+      local v = tbl[i]
+      tbl[v] = i
+  end
+
+  return tbl
+end
+
+-- serializes a value to a string
+function serialize(value)
+  local s = luatexts.save(value)
+  assert(type(s) == "string")
+  return s
+end
+
+-- returns value from string
+function deserialize(s)
+  assert(type(s) == "string")
+  return luatexts.load(s)
 end
