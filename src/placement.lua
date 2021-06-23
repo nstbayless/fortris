@@ -473,7 +473,9 @@ function draw_placement()
       love.graphics.rectangle("fill", coordx, coordy, text_width, text_height)
 
       love.graphics.setColor(1, 0.8, 0.6, 0.9)
-      love.graphics.printf(text, g_font_msg, coordx, coordy + 4, text_width, "center")
+      if not g_is_lutro then
+        love.graphics.printf(text, g_font_msg, coordx, coordy + 4, text_width, "center")
+      end
     end
   end
 
@@ -632,13 +634,13 @@ function update_placement(dt)
       g_state.placement.show_message_timer = 0
     end
     
-    if key_pressed("t") or key_pressed("tab") then
+    if key_pressed("swap") then
       if g_state.full_feature then
         placement_swap()
       end
     end
 
-    if key_pressed("space") or key_pressed("return") then
+    if key_pressed("place") then
       local cache = placement_get_cache()
       if not cache.confirm and cache.requires_confirm then
         cache.confirm = true

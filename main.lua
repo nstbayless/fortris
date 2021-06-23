@@ -340,7 +340,7 @@ function love.update(dt)
   if g_state.game_over then
     g_state.game_over_timer = g_state.game_over_timer + dt
 
-    if g_state.game_over_timer >= 1.5 and (key_pressed("space") or key_pressed("return")) then
+    if g_state.game_over_timer >= 1.5 and (key_pressed("place")) then
       -- restart game
       init_state()
     else
@@ -379,7 +379,7 @@ function love.update(dt)
   end
   update_input(dt)
 
-  if key_pressed("p") or key_pressed("escape") then
+  if key_pressed("pause") then
     g_state.paused = not g_state.paused
     if g_state.game_over then
       g_state.paused = false
@@ -397,7 +397,7 @@ function love.update(dt)
   end
   camera_update(dt)
 
-  if demo_is_recording() and key_pressed("i") then
+  if not g_is_lutro and demo_is_recording() and key_pressed("save_demo") then
     demo_save()
   end
 end

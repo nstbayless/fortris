@@ -9,7 +9,7 @@ function effects_draw()
   for id, effect in pairs(g_state.effects) do
     if effect and effect.sprite then
       draw_sprite(effect.sprite, effect.timer, effect.x, effect.y, 0, effect.sx, effect.sy)
-    elseif effect and effect.text then
+    elseif effect and effect.text and not g_is_lutro then
       love.graphics.setColor(1, 1, 1, math.clamp((effect.animation_end - effect.timer) / math.max(effect.rate, 1), 0, 1))
       love.graphics.print(effect.text, g_font_effect, effect.x - 10 * #effect.text, effect.y - 6)
       love.graphics.setColor(1, 1, 1)
