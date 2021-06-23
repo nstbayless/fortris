@@ -2,8 +2,8 @@ function camera_init()
   -- camera expressed in grid dimensions
   local w,h = love.graphics.getDimensions()
   g_state.camera = {
-    x=0,
-    y=0,
+    x=g_state.initial_board_width / 2 - w / k_dim_x / 2,
+    y=g_state.initial_board_height / 2 - h / k_dim_y / 2,
     w=w / k_dim_x,
     h=h / k_dim_y,
     shake_x = 0,

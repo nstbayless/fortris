@@ -39,26 +39,3 @@ function draw_sprite(sprite, t, x, y, r, sx, sy, fn)
   -- TODO: use ox, oy (origin offset)
   return fn(sprite.spriteSheet, sprite.quads[spriteNum], x - sx * sprite.offx, y - sy * sprite.offy, r, sx, sy)
 end
-
-function sprite_batch_add_sprite(sprite_batch, sprite, t, x, y, r, sx, sy)
-  return draw_sprite(sprite, t, x, y, r, sx, sy,
-    function(image, ...)
-      assert(image == sprite_batch:getTexture())
-      return sprite_batch:add(...)
-    end
-  )
-end
-
-function sprite_batch_set_sprite(sprite_batch, idx, sprite, t, x, y, r, sx, sy)
-  return draw_sprite(sprite, t, x, y, r, sx, sy,
-    function(image, ...)
-      assert(image == sprite_batch:getTexture())
-      assert(sprite_batch and idx and idx >= 0)
-      return sprite_batch:set(idx, ...)
-    end
-  )
-end
-
-function sprite_batch_remove(sprite_batch, idx)
-  sprite_batch:set(idx, 0, 0, 0, 0, 0)
-end

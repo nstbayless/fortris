@@ -31,6 +31,9 @@ folder guide:
   "Open Font License"
   Share with font available, can't be sold individually, and modifications require the name to be changed.
 
+[u]
+  Uncertain (requires more research most likely)
+
 ---------------------------------------------------------------------
 -- Packs and Images -------------------------------------------------
 
@@ -82,3 +85,6 @@ folder guide:
 [Gamaliel]
   OFL
   https://fontlibrary.org/en/font/gamaliel
+
+[font_example]
+  from Lua documentation

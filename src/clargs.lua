@@ -1,4 +1,7 @@
 -- parse command line args
+if not arg then
+  arg = {}
+end
 g_debug_mode = table.contains(arg, "debug") or table.contains(arg, "--debug")
 g_test_mode = table.contains(arg, "test") or table.contains(arg, "--test") -- testing active
 

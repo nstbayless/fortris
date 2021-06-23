@@ -1,8 +1,9 @@
 -- allow debugging
-if arg[#arg] == "vsc_debug" then require("lldebugger").start() end
+if arg and arg[#arg] == "vsc_debug" then require("lldebugger").start() end
 
 -- operating system
 g_os = love.system.getOS()
+g_is_lutro = g_os:lower() == "lutro"
 
 -- paranoia / future-proofing against love.js changes...
 g_is_web = g_os:lower() == "web" or g_os:lower() == "browser" or g_os:lower() == "firefox" or g_os:lower() == "chrome" or g_os:lower() == "emscripten"
@@ -10,6 +11,9 @@ g_is_web = g_os:lower() == "web" or g_os:lower() == "browser" or g_os:lower() ==
 if g_is_web then
   -- JavaScript ffi
   require("ext.js")
+end
+if g_is_lutro then
+  require("src.lutro_compat")
 end
 
 -- supply missing library if needed
@@ -21,6 +25,8 @@ end
 k_dim_x = 32
 k_dim_y = 32
 k_version = "Fortris v0.7.5"
+k_shaders_supported = not g_is_lutro
+k_tile_canvas = true
 K_GAME_OVER_STOP_TIME = 3 -- how long it takes to fade out and stop after game over
 
 k_block_colors = {"blue", "darkgray", "gray", "green", "lightblue", "orange", "yellow", "pink", "purple", "red", "red2", "white"}
@@ -134,12 +140,19 @@ end
 
 function love.load()
   math.randomseed(0)
-  g_shaders.game_over = love.graphics.newShader("resources/shaders/game_over.shader")
+  
+  g_shaders.game_over = k_shaders_supported and love.graphics.newShader("resources/shaders/game_over.shader")
 
   love.graphics.setDefaultFilter("linear", "nearest")
-  g_font = love.graphics.newFont("resources/fonts/ofl/autobahn/autobahn.ttf", 27, "normal", dpi())
-  g_font_msg = love.graphics.newFont("resources/fonts/ofl/Gamaliel/Gamaliel.otf", 20, "normal", dpi())
-  g_font_effect = love.graphics.newFont("resources/fonts/ofl/triod-postnaja/TriodPostnaja.ttf", 15, "normal", dpi())
+  if g_is_lutro then
+    g_font = love.graphics.newImageFont( 'resources/images/u/font_example_24.png', ' ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789' )
+    g_font_msg = love.graphics.newImageFont( 'resources/images/u/font_example.png', ' ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789' )
+    g_font_effect = love.graphics.newImageFont( 'resources/images/u/font_example.png', ' ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789' )
+  else
+    g_font = love.graphics.newFont("resources/fonts/ofl/autobahn/autobahn.ttf", 27, "normal", dpi())
+    g_font_msg = love.graphics.newFont("resources/fonts/ofl/Gamaliel/Gamaliel.otf", 20, "normal", dpi())
+    g_font_effect = love.graphics.newFont("resources/fonts/ofl/triod-postnaja/TriodPostnaja.ttf", 15, "normal", dpi())
+  end
   g_images.grass = love.graphics.newImage("resources/images/f/checkered-grass.png")
   g_images.castle = love.graphics.newImage("resources/images/pd/wyrmsun-cc0/town_hall.png")
   g_images.goblin = new_sprite("resources/images/cl/wyrmsun-gpl/goblin_spearman.png", 72, 72, 72/2, 72/2 + 5)
@@ -158,7 +171,6 @@ function love.load()
     g_images.blocks[color] = love.graphics.newImage("resources/images/pd/kdd-blocks/" .. color .. ".png")
     g_images.blocks[i] = g_images.blocks[color]
   end
-  love.graphics.setNewFont(12)
 
   init_state()
 end
@@ -174,6 +186,8 @@ function draw_background_layer()
   local scale_x = k_dim_x / (w / rep_x)
   local scale_y = k_dim_y / (h / rep_y)
 
+  -- poor tiling logic
+  -- TODO: update / fix this.
   for x = g_state.board.left*k_dim_x,g_state.board.right*k_dim_x - 1,scale_x * w do
     for y = g_state.board.top*k_dim_y,g_state.board.bottom*k_dim_y - 1,scale_y * h do
       love.graphics.draw(g_images.grass, x, y, 0, scale_x, scale_y)
@@ -192,7 +206,7 @@ function draw_image_on_grid(image, gx, gy, gw, gh)
   local sx = gw * k_dim_x / w
   local sy = gh * k_dim_y / h
 
-  love.graphics.draw(image, gx * k_dim_x, gy * k_dim_y, 0, sx, sy)
+  love.graphics.draw(image, gx * k_dim_x, gy * k_dim_y, 0, sx, sy);
 end
 
 function love.draw()
@@ -202,15 +216,17 @@ function love.draw()
   camera_apply_transform()
 
   -- global shader
-  if g_state.game_over or g_state.paused then
-    if g_state.paused then
-      g_shaders.game_over:send("weight", 1)  
+  if k_shaders_supported then
+    if g_state.game_over or g_state.paused then
+      if g_state.paused then
+        g_shaders.game_over:send("weight", 1)  
+      else
+        g_shaders.game_over:send("weight", math.clamp(g_state.game_over_timer / 2 - 0.5, 0, 0.9))
+      end
+      love.graphics.setShader(g_shaders.game_over)
     else
-      g_shaders.game_over:send("weight", math.clamp(g_state.game_over_timer / 2 - 0.5, 0, 0.9))
+      love.graphics.setShader()
     end
-    love.graphics.setShader(g_shaders.game_over)
-  else
-    love.graphics.setShader()
   end
 
   -- draw these in world coordinates, (transformed by camera).
@@ -225,12 +241,18 @@ function love.draw()
     if not g_state.game_over then
       draw_placement()
     end
-    svy_draw_spiel()
+    if not g_is_lutro then
+      -- TODO: lutro (crash)
+      svy_draw_spiel()
+    end
   end
   love.graphics.pop()
 
   -- not affected by camera
-  svy_draw_overlay()
+  if not g_is_lutro then
+    -- TODO: lutro (crash)
+    svy_draw_overlay()
+  end
 end
 
 function spawn_monsters(dt)
