@@ -30,9 +30,9 @@ then
   if ! [ -d "docs/$version" ]
   then
     mkdir "docs/$version"
+    cp -r jsbuild/* docs/$version/
   fi
   cp -r jsbuild/* docs/
-  cp -r jsbuild/* docs/$version/
 
   echo "Now commit and push on main branch to publish to github pages."
 fi
