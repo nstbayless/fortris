@@ -21,3 +21,18 @@ RETRO_DEVICE_ID_JOYPAD_L2       = 13
 RETRO_DEVICE_ID_JOYPAD_R2       = 14
 RETRO_DEVICE_ID_JOYPAD_L3       = 15
 RETRO_DEVICE_ID_JOYPAD_R3       = 16
+
+-- converts floats in the range 0-1 to unsigned bytes in the range 0-255
+local function xff(...)
+  local t = {...}
+  for i, v in ipairs(t) do
+    t[i] = v * 255
+  end
+  return unpack(t)
+end
+
+local setColor = love.graphics.setColor
+local setBackgroundColor = love.graphics.setBackgroundColor
+
+love.graphics.setColor = function(...) return setColor(xff(...)) end
+love.graphics.setBackgroundColor = function(...) return setBackgroundColor(xff(...)) end

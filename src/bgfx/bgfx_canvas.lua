@@ -6,6 +6,7 @@ function bgfx_add(id, opts)
 end
 
 function bgfx_refresh_tile(bgfx, x, y)
+
   -- draw to tile layer canvas
   local already_in_canvas = love.graphics.getCanvas() == bgfx.canvas
   if not already_in_canvas then
@@ -20,6 +21,7 @@ function bgfx_refresh_tile(bgfx, x, y)
   )
 
   -- clear this tile
+  love.graphics.setBackgroundColor(0, 0, 0, 0)
   love.graphics.clear()
 
   -- render tile
@@ -55,10 +57,9 @@ function bgfx_refresh(bgfx)
   end
 
   -- lutro cannot update all the tiles in one frame; it's too slow.
-  if g_is_lutro and g_state.time < 0.5 then return end
+  --if g_is_lutro and g_state.time < 0.2 then return end
 
   love.graphics.setCanvas(bgfx.canvas)
-  love.graphics.clear()
 
   for y, x in board_iterate() do
     bgfx_refresh_tile(bgfx, x, y)

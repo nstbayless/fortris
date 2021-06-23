@@ -210,10 +210,12 @@ function draw_image_on_grid(image, gx, gy, gw, gh)
 end
 
 function love.draw()
-  love.graphics.setColor(0xff,0xff,0xff)
+  love.graphics.setColor(1, 1, 1)
   love.graphics.setBackgroundColor(0,0,0)
   love.graphics.push()
-  camera_apply_transform()
+  if not g_is_lutro then
+    camera_apply_transform()
+  end
 
   -- global shader
   if k_shaders_supported then
@@ -257,7 +259,7 @@ end
 
 function spawn_monsters(dt)
   -- spawning monsters
-  if g_state.placement_count >= 2 then
+  if g_state.placement_count > 2 then
     g_state.spawn_timer = g_state.spawn_timer + dt
     g_state.spawn_rate = g_state.spawn_rate + dt / 500
     g_state.spawn_progress = g_state.spawn_progress + dt * g_state.spawn_rate

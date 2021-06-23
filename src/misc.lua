@@ -79,9 +79,13 @@ function get_rotation_offset_for_animation(frames, dx, dy)
   end
 end
 
-function draw_concentric_circles(x, y, r1, r2, interval, offset, fade)
+function draw_concentric_circles(x, y, r1, r2, interval, offset, fade, ripple)
   local pr, pg, pb, pa = love.graphics.getColor()
-  for r = (r1 + (offset % interval)),r2,interval do
+  for _r = (r1 + (tern(ripple, 0, offset) % interval)),r2,interval do
+
+    -- apply ripple
+    local r = _r + d(ripple, 0) * math.sin(_r/4 + offset)
+
     -- set alpha
     local p = (r - r1) / (r2 - r1)
     -- border fading

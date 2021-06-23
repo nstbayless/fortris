@@ -424,7 +424,13 @@ function draw_placement()
         -- range circle
         local interval = 3
         local offset = tern(cache.placable, g_state.time * 3, g_state.time)
-        draw_concentric_circles((turret.x + turret.w / 2) * k_dim_x, (turret.y + turret.h / 2) * k_dim_y, (props.min_range) * k_dim_x, props.max_range * k_dim_x, interval, offset, true)
+        local ripple = nil
+        if g_is_lutro then
+          interval = 20
+          ripple = 4
+          offset = offset / 1.5
+        end
+        draw_concentric_circles((turret.x + turret.w / 2) * k_dim_x, (turret.y + turret.h / 2) * k_dim_y, (props.min_range) * k_dim_x, props.max_range * k_dim_x, interval, offset, true, ripple)
       end
     end
 
