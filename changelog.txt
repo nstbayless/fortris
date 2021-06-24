@@ -1,0 +1,8 @@
+======= Fortris Changelog =======
+
+---------------------------------
+------- Fortris v0.7.7 ----------
+  - added border around edges
+
+------- Fortris v0.7.6 ----------
+  - added border around edges

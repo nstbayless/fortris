@@ -24,7 +24,7 @@ end
 
 k_dim_x = 32
 k_dim_y = 32
-k_version = "Fortris v0.7.6"
+k_version = "Fortris v0.7.7"
 k_shaders_supported = not g_is_lutro
 k_tile_canvas = true
 K_GAME_OVER_STOP_TIME = 3 -- how long it takes to fade out and stop after game over
@@ -57,7 +57,7 @@ require("src.placement")
 require("src.camera")
 require("src.sprite")
 require("src.unit")
-require("src.board_graphics")
+require("src.bgfx")
 require("src.test")
 
 function init_state()
@@ -165,6 +165,7 @@ function love.load()
   g_images.wall = new_sprite("resources/images/pd/wyrmsun-cc0/goblin_wall.png", 16, 16)
   g_images.rock = new_sprite("resources/images/pd/wyrmsun-cc0/rock.png", 32, 32)
   g_images.tree = new_sprite("resources/images/pd/wyrmsun-cc0/tree.png", 32, 32)
+  g_images.border = new_sprite("resources/images/f/border.png", 16, 16)
   g_images.fog_of_war = new_sprite("resources/images/f/fog_of_war.png", 16, 16)
   g_images.blocks = {}
   for i, color in ipairs(k_block_colors) do
@@ -234,11 +235,19 @@ function love.draw()
   -- draw these in world coordinates, (transformed by camera).
   do
     draw_background_layer()
-    board_draw()
+    bgfx_draw()
+    bgfx_draw(BGFX_LAYER.border)
     static_draw_all()
     unit_draw_all()
+    if g_debug_mode then
+      -- draw semitransparent fog
+      love.graphics.setColor(1, 1, 1, 0.5)
+      bgfx_draw(BGFX_LAYER.fog)
+      love.graphics.setColor(1, 1, 1, 1)
+    else
+      bgfx_draw(BGFX_LAYER.fog)
+    end
     effects_draw()
-    board_draw_fog()
     board_draw_letterbox()
     if not g_state.game_over then
       draw_placement()

@@ -1,5 +1,4 @@
 set -e
-set -x
 
 if [ -d jsbuild ]
 then
@@ -23,6 +22,13 @@ version=`grep "k_version =" main.lua | sed 's/k_version = "Fortris //' | sed 's/
 
 if [ "$1" == "--publish" ]
 then
+
+  if ! [ -z "$(git status -s | grep '^ ')" ]
+  then
+    echo "unstaged changes are present. Cannot commit."
+    exit 1
+  fi
+
   if ! [ -d "docs/" ]
   then
     mkdir docs/
@@ -31,8 +37,14 @@ then
   then
     mkdir "docs/$version"
     cp -r jsbuild/* docs/$version/
+  else
+    echo ""
+    echo "error: $version already published."
+    echo "rm -r docs/$version to replace"
+    exit 1
   fi
   cp -r jsbuild/* docs/
 
-  echo "Now commit and push on main branch to publish to github pages."
+  git add docs/
+  git commit -m "publish $version"
 fi

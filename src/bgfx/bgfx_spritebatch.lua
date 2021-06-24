@@ -15,6 +15,7 @@ end
 function bgfx_add(id, opts)
   opts.sprite_batch = love.graphics.newSpriteBatch(opts.sprite.spriteSheet, bgfx_get_sprite_batch_sprite_count(opts))
   opts.indices = {}
+  opts.layer = opts.layer or BGFX_LAYER.base
   g_bgfx[id] = opts
   bgfx_refresh(g_bgfx[id])
 end
@@ -87,7 +88,7 @@ function bgfx_refresh_tile(bgfx, x, y)
   )
 end
 
-function bgfx_draw_layer(layer)
+function bgfx_draw_feature(layer)
   if layer then
     love.graphics.draw(layer.sprite_batch)
   end

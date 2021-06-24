@@ -253,15 +253,29 @@ function board_rubble_decay(dt)
 end
 
 function board_draw_letterbox()
-  -- draw borders
+  -- draw black squares to crop map.
+  -- draw 5 times with increasing thickness and transparency
   local m = 10000
   local board = g_state.board
-  love.graphics.setColor(0.08, 0.07, 0.09)
-  love.graphics.rectangle("fill", board.left * k_dim_x -m, board.top * k_dim_y -m, m * 2 + board_width() * k_dim_x, m)
-  love.graphics.rectangle("fill", board.left * k_dim_x -m, board.top * k_dim_y, m, board_height() * k_dim_y)
-  love.graphics.rectangle("fill", board.right * k_dim_x, board.top * k_dim_y, m, board_height() * k_dim_y)
-  love.graphics.rectangle("fill", board.left * k_dim_x -m, board.bottom * k_dim_y, m * 2 + board_width() * k_dim_x, m)
-  love.graphics.setColor(1, 1, 1)
+  local num_borders = 10
+  if g_is_lutro then
+    num_borders = 3
+  end
+  for i = 0,num_borders-1 do
+    local p = i/num_borders
+    local px = k_dim_x * (p + 0.5/num_borders) * 0.8
+    local py = k_dim_y * (p + 0.5/num_borders) * 0.8
+    love.graphics.setColor(0, 0, 0, math.pow(1-p, 1.37))
+    -- top
+    love.graphics.rectangle("fill", board.left * k_dim_x - m, board.top * k_dim_y -m, m * 2 + board_width() * k_dim_x, m + py)
+    -- left
+    love.graphics.rectangle("fill", board.left * k_dim_x -m, board.top * k_dim_y, m + px, board_height() * k_dim_y)
+    -- right
+    love.graphics.rectangle("fill", board.right * k_dim_x - px, board.top * k_dim_y, m, board_height() * k_dim_y)
+    -- bottom
+    love.graphics.rectangle("fill", board.left * k_dim_x -m, board.bottom * k_dim_y - py, m * 2 + board_width() * k_dim_x, m)
+    love.graphics.setColor(1, 1, 1)
+  end
 end
 
 function board_get_value(x, y, default)

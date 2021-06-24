@@ -1,5 +1,6 @@
 function bgfx_add(id, opts)
   opts.canvas = nil
+  opts.layer = opts.layer or BGFX_LAYER.base
   opts.w, opts.h = nil, nil
   g_bgfx[id] = opts
   bgfx_refresh(g_bgfx[id])
@@ -42,7 +43,7 @@ function bgfx_refresh_tile(bgfx, x, y)
   end
 end
 
-function bgfx_draw_layer(layer)
+function bgfx_draw_feature(layer)
   if layer then
     love.graphics.draw(layer.canvas, g_state.board.left * k_dim_x, g_state.board.top * k_dim_y)
   end
