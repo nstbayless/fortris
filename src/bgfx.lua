@@ -59,7 +59,7 @@ function bgfx_init()
     sprite = g_images.border,
     mask = K_ROCK,
     layer = BGFX_LAYER.border,
-    color = {1, 1, 0.7, 0.8},
+    color = {1, 1, 0.7, 0.668},
     subdivided = true,
     subtile_fn = function(x, y, dx, dy)
       local board = g_state.board

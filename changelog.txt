@@ -1,8 +1,9 @@
 ======= Fortris Changelog =======
 
 ---------------------------------
-------- Fortris v0.7.7 ----------
-  - added border around edges
+------- Fortris v0.7.8 ----------
+  - added sometimes-visible border around trees and rocks
 
-------- Fortris v0.7.6 ----------
+---------------------------------
+------- Fortris v0.7.7 ----------
   - added border around edges

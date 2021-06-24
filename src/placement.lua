@@ -452,6 +452,42 @@ function draw_placement()
     end
   end
 
+  -- centre of placement (in grid coordinates)
+  local centre_x = (placement.x + width2d(placement.grid) / 2)
+  local centre_y = (placement.y + height2d(placement.grid) / 2)
+
+  -- show pathable boundaries
+  local pathable_boundary_margin = 3
+  local K_DISPLAY_EDGES = bit.bor(K_TREE, K_ROCK) -- only display for rock and tree right now
+  for x = placement.x - pathable_boundary_margin,placement.x + width2d(placement.grid) + pathable_boundary_margin -1 do
+    for y = placement.y - pathable_boundary_margin,placement.y + height2d(placement.grid) + pathable_boundary_margin -1 do
+      -- only draw boundaries on tiles matching K_DISPLAY_EDGES which are impathable and not concealed
+      if bit.band(board_get_value(x, y, 0), bit.band(K_DISPLAY_EDGES, K_IMPATHABLE)) ~= 0
+        and bit.band(board_get_value(x, y, K_FOG_OF_WAR), K_FOG_OF_WAR) == 0 then
+        for xc = x - 1,x+1 do
+          for yc = y-1,y+1 do
+            if (xc == x and yc ~= y) or (xc ~= x and yc == y) then
+              if bit.band(board_get_value(xc, yc, K_DISPLAY_EDGES), K_DISPLAY_EDGES) == 0 then
+                -- this is a border, so we draw it.
+                local dx, dy = xc - x, yc - y
+                local line_interval = 4
+                for j = 0,tern(g_is_lutro, 0, 2) do
+                  local p = math.max(0.1, 1 - point_distance( centre_x, centre_y, xc + 0.5, yc + 0.5) / 8) * (1 - j / 3)
+                  love.graphics.setColor(0.9, 0.8, 1, (0.7 + math.sin(g_state.time * 3) * 0.1) * p)
+                  if yc == y then
+                    love.graphics.line(k_dim_x * (x + xc + 1) / 2 - dx * j * line_interval, k_dim_y * y + 1, k_dim_x * (x + xc + 1) / 2 - dx * j * line_interval, k_dim_y * (y + 1) - 1)
+                  elseif xc == x then
+                    love.graphics.line(k_dim_x * x, k_dim_y * (y + yc + 1) / 2 - dy * j * line_interval, k_dim_x * (x + 1) - 1, k_dim_y * (y + yc + 1) / 2 - dy * j * line_interval)
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
   -- implacable reason
   if cache.placable ~= 1 or cache.confirm or (cache.placable == 1 and cache.payload > K_PLACEMENT_COST) then
     local text = K_PLACEMENT_REASON_TEXT[cache.reason]
@@ -472,9 +508,9 @@ function draw_placement()
     if text and show_message then
       local text_width = 12 * #text
       local text_height = 30
-      local coordx = k_dim_x * (placement.x + width2d(placement.grid) / 2) - text_width / 2
-      local coordy = k_dim_x * (placement.y + height2d(placement.grid) / 2) - text_height / 2
-
+      local coordx = k_dim_x * centre_x - text_width / 2
+      local coordy = k_dim_x * centre_y - text_height / 2
+      
       love.graphics.setColor(0, 0, 0, 0.6 + math.sin(g_state.time * 6) * tern(glow, 0.2, 0.02))
       love.graphics.rectangle("fill", coordx, coordy, text_width, text_height)
 
