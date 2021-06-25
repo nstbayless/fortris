@@ -198,7 +198,7 @@ function placement_placable()
     if not g_debug_mode and g_state.statics_count["turret"] < K_MINIMUM_TURRETS_FOR_DESTROY then
       return false, K_PLACEMENT_REASON_DESTROY_TURRETS_COUNT, K_MINIMUM_TURRETS_FOR_DESTROY
     end
-    if g_state.svy.money < K_PLACEMENT_COST then
+    if g_state.svy.money < K_REMOVAL_COST then
       return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS, K_REMOVAL_COST
     end
     return 2, K_PLACEMENT_REASON_DESTROY, K_REMOVAL_COST
