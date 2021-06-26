@@ -3,6 +3,7 @@ if arg and arg[#arg] == "vsc_debug" then require("lldebugger").start() end
 
 -- operating system
 g_os = love.system.getOS()
+-- lutro has a number of limitations, so there are various checks against it throughout the code base
 g_is_lutro = g_os:lower() == "lutro"
 
 -- paranoia / future-proofing against love.js changes...
@@ -24,7 +25,7 @@ end
 
 k_dim_x = 32
 k_dim_y = 32
-k_version = "Fortris v0.7.9"
+k_version = "Fortris v0.7.10"
 k_shaders_supported = not g_is_lutro
 k_tile_canvas = true
 K_GAME_OVER_STOP_TIME = 3 -- how long it takes to fade out and stop after game over
@@ -160,6 +161,7 @@ function love.load()
   g_images.turret = new_sprite("resources/images/pd/hv/Turret.png", 60, 60, 29, 35)
   g_images.artillery = new_sprite("resources/images/pd/hv/Artillery.png", 80, 80, 40, 60)
   g_images.turret_base = new_sprite("resources/images/pd/hv/Turret-base.png", 60, 40, 21, 15)
+  g_images.turret_base_3x3 = new_sprite("resources/images/pd/hv/Turret-base-3x3.png", 48, 48, 24, 24)
   g_images.blood = new_sprite("resources/images/pd/hv/blood.png", 20, 20, 10, 10)
   g_images.muzzle = new_sprite("resources/images/pd/hv/Muzzle.png", 20, 20, 10, 15)
   g_images.wall = new_sprite("resources/images/pd/wyrmsun-cc0/goblin_wall.png", 16, 16)

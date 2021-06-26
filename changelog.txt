@@ -1,6 +1,11 @@
 ======= Fortris Changelog =======
 
 ---------------------------------
+------- Fortris v0.7.10 ----------
+  - 3x3 and 4x4 turrets have bases to indicate their size
+  - unused wall looks different than used (turretted) wall
+
+---------------------------------
 ------- Fortris v0.7.8 ----------
   - added sometimes-visible border around trees and rocks
 

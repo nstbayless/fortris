@@ -98,7 +98,7 @@ function peek_placement(idx)
   while #g_state.placement_queue <= idx do
     local add = shuffle(iota(#K_PLACEMENTS))
 
-    -- ensure square appears at start of the game
+    -- ensure square appears near start of the game
     if g_state.placement_count == 0 and #g_state.placement_queue == 0 then
       table.swap(add, math.random(2, 3), indexof(add, 2))
     end

@@ -133,8 +133,8 @@ function static_emplace(opt)
       data.sprite = s.sprite
       data.sprite_offx = s.sprite_offx or 0
       data.sprite_offy = s.sprite_offy or 0
-      data.sprite_sx = s.scale_x or 1
-      data.sprite_sy = s.scale_y or 1
+      data.sprite_sx = s.scale_x or s.scale or 1
+      data.sprite_sy = s.scale_y or s.scale or 1
       data.sprite_subimage = s.sprite_image or 0
       table.insert(static.sprites, data)
     end

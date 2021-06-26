@@ -21,9 +21,11 @@ local K_SHADOW = {
 }
 
 -- returns one of four corner tiles for the wall at the given idx
-function wall_get_subtile(base_x, base_y, dx, dy, mask, edges_are_walls, shadows)
+function wall_get_subtile(base_x, base_y, dx, dy, mask, edges_are_walls, shadows, altmask)
   assert(dx and dy and dx ~= 0 and dy ~= 0)
   local wall_at = {}
+
+  static_alt = 4*7*ibool(bit.band(board_get_value(base_x, base_y, 0), altmask or 0) ~= 0)
   
   -- check 2x2 square to see what walls are there.
   for y in ordered_range(base_y, base_y + dy) do
@@ -59,25 +61,25 @@ function wall_get_subtile(base_x, base_y, dx, dy, mask, edges_are_walls, shadows
     if wall_at[base_y + dy][base_x] and wall_at[base_y][base_x + dx] then
       if wall_at[base_y + dy][base_x + dx] then
         -- full
-        return 5
+        return 5 + static_alt
       else
-        return K_WALL_INNER_CORNER[imgy][imgx]
+        return K_WALL_INNER_CORNER[imgy][imgx] + static_alt
       end
     end
 
     -- horizontal wall
     if wall_at[base_y][base_x + dx] and not wall_at[base_y + dy][base_x] then
-      return K_WALL_HORIZONTAL[imgy]
+      return K_WALL_HORIZONTAL[imgy] + static_alt
     end
 
     -- vertical  wall
     if wall_at[base_y + dy][base_x] and not wall_at[base_y][base_x + dx] then
-      return K_WALL_VERTICAL[imgx]
+      return K_WALL_VERTICAL[imgx] + static_alt
     end
 
     -- outer corner
     if not wall_at[base_y + dy][base_x] and not wall_at[base_y][base_x + dx] then
-      return K_WALL_OUTER_CORNER[imgy][imgx]
+      return K_WALL_OUTER_CORNER[imgy][imgx] + static_alt
     end
   end
 end

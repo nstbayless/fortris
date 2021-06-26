@@ -38,11 +38,11 @@ function bgfx_init()
   })
   bgfx_add("wall", {
     sprite = g_images.wall,
-    mask = K_WALL,
+    mask = bit.bor(K_WALL, K_STATIC),
     subdivided = true, -- use 2x2 per tile instead of 1
     subtile_fn = function(x, y, dx, dy)
       assert(x and y and dx and dy)
-      return wall_get_subtile(x, y, dx, dy, K_WALL, false, true)
+      return wall_get_subtile(x, y, dx, dy, K_WALL, false, true, K_STATIC)
     end
   })
   bgfx_add("rubble", {

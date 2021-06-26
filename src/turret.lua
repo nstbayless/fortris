@@ -43,7 +43,7 @@ function turret_location_in_use(x, y, w, h, used)
 end
 
 function turret_get_props_by_size(size)
-  local sprites = {{sprite = g_images.turret_base}, {sprite = g_images.turret}}
+  local sprites = {{sprite = g_images.turret_base, scale=1}, {sprite = g_images.turret}}
 
   local props = {
     target = nil,
@@ -55,7 +55,7 @@ function turret_get_props_by_size(size)
   }
 
   if size == 3 then
-    sprites = {{sprite = nil}, {sprite = g_images.artillery}}
+    sprites = {{sprite = g_images.turret_base_3x3, scale=1.5}, {sprite = g_images.artillery}}
     props = {
       target = nil,
       min_range = 5,
@@ -68,7 +68,7 @@ function turret_get_props_by_size(size)
 
   if size == 4 then
     -- TODO: a bigger sprite.
-    sprites = {{sprite = nil}, {sprite = g_images.artillery}}
+    sprites = {{sprite = g_images.turret_base_3x3, scale=2}, {sprite = g_images.artillery}}
     props = {
       target = nil,
       min_range = 5,
