@@ -18,7 +18,8 @@ local K_PLACEMENTS = {
     grid = {
       {1, 1},
       {1, 1},
-    }
+    },
+    can_upgrade = true
   },
 
   -- L
@@ -194,10 +195,25 @@ function placement_placable()
     mask=K_WALL,
     cvalue = K_WALL
   }) then
-    -- check that we have sufficient money
+    -- check that destroying (or upgrading) is available
     if not g_debug_mode and g_state.statics_count["turret"] < K_MINIMUM_TURRETS_FOR_DESTROY then
       return false, K_PLACEMENT_REASON_DESTROY_TURRETS_COUNT, K_MINIMUM_TURRETS_FOR_DESTROY
     end
+
+    -- possibility that this is to upgrade
+    if g_state.placement.can_upgrade then
+      local static_id = static_at(g_state.placement.x, g_state.placement.y)
+      if static_id then
+        local static = static_get(static_id)
+        if static and table.contains(static.tags, "upgradable") then
+          if static.x == g_state.placement.x and static.y == g_state.placement.y then
+            
+          end
+        end
+      end
+    end
+
+    -- check that we have sufficient money
     if g_state.svy.money < K_REMOVAL_COST then
       return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS, K_REMOVAL_COST
     end
@@ -251,11 +267,15 @@ function next_placement()
   set_placement({
     type = "block",
     color = indexof(k_block_colors, base.color),
+    can_upgrade = base.can_upgrade,
     grid = base.grid,
 
     -- direction turrets will be laid / 'facing'
     dx = 1,
-    dy = 1
+    dy = 1,
+
+    -- upgrade offset for hovered-over static
+    upgrade_offset = 0,
   })
 
   -- rotate randomly
@@ -674,6 +694,11 @@ function update_placement(dt)
       g_state.placement = proposed_placement
       placement_set_dirty(true)
       g_state.placement.show_message_timer = 0
+    end
+
+    -- reset upgrade index if moved
+    if dx ~= 0 or dy ~= 0 then
+      g_state.placement.upgrade_offset = 0
     end
     
     if key_pressed("swap") then

@@ -8,8 +8,15 @@ K_ANIMATION_WALK[3] = 20
 -- easing into and out of turn speeds (reciprocal of seconds to fully change speed)
 K_TURNING_TIMER_DEPRECIATION_RATE = 3.6
 
--- portion of an ogre's hp to squash them at
+-- portion of an ogre's hp damage dealt when squashing
 K_SQUASH_DAMAGE = 1/5
+-- margin of forgiveness for fully squashing an ogre
+K_SQUASH_MARGIN = 1/10
+
+-- damage done when breaking a wall (portion of hp)
+K_WALL_DAMAGE = 1/27
+-- damage done when breaking a turret (portion of hp)
+K_STATIC_DAMAGE = 1/7
 
 local g_unit_id = 0
 
@@ -179,7 +186,7 @@ end
 function unit_splatter(id)
   local unit = unit_get(id)
   if unit then
-    if unit.squashable or unit.health <= K_SQUASH_DAMAGE * unit.healthmax then
+    if unit.squashable or unit.health <= (K_SQUASH_DAMAGE + K_SQUASH_MARGIN) * unit.healthmax then
       local gx, gy = unit_get_precise_grid_position(id)
       for i = 1,7 + math.random(5) do
         local effect = {
@@ -418,6 +425,9 @@ function unit_update(id, dt)
             y = y
           })
 
+          -- ensure board section is no longer impathable.
+          assert(bit.band(board_get_value(x, y, 0), K_IMPATHABLE) == 0)
+
           -- remove any statics such as turrets
           local static_removed = static_destroy_at(x, y)
 
@@ -427,7 +437,7 @@ function unit_update(id, dt)
 
           if not unit.concealed then
             -- wound unit
-            unit_apply_damage(unit.id, 1 + ibool(static_removed) * 3.5, false)
+            unit_apply_damage(unit.id, (K_WALL_DAMAGE + ibool(static_removed) * K_STATIC_DAMAGE) * unit.healthmax, false)
             camera_apply_shake(0.2, 2 + math.frandom(0.2) + ibool(static_removed))
           end
         end

@@ -211,7 +211,8 @@ function turret_emplace_potentials_at_grid(x, y, grid, dx, dy)
       sprites = sprites,
       fn_update = turret_update,
       props = props,
-      tags = {"turret"}
+      tags = potential.size == 2 and {"turret", "upgradable"} or {"turret"},
+      upgrade_options = {"normal", "ice", "fire"}
     })
   end
 end
