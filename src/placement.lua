@@ -166,6 +166,7 @@ K_PLACEMENT_REASON_TEXT = {
 -- also returns a 'reason'
 function placement_placable()
   local placement = g_state.placement
+  local payload = {}
 
   -- check for being completely in fog of war (unless debugging)
   if not g_debug_mode then
@@ -176,14 +177,14 @@ function placement_placable()
       mask=K_FOG_OF_WAR,
       all=true
     }) then
-      return false, K_PLACEMENT_REASON_SHROUD
+      return false, K_PLACEMENT_REASON_SHROUD, payload
     end
   end
 
   -- check for touching the border
   for y, x, v in array_2d_iterate(g_state.placement.grid, 0) do
     if v ~= 0 and board_tile_is_border(x + g_state.placement.x, y + g_state.placement.y) then
-      return false, K_PLACEMENT_REASON_BORDER
+      return false, K_PLACEMENT_REASON_BORDER, payload
     end
   end
 
@@ -197,7 +198,8 @@ function placement_placable()
   }) then
     -- check that destroying (or upgrading) is available
     if not g_debug_mode and g_state.statics_count["turret"] < K_MINIMUM_TURRETS_FOR_DESTROY then
-      return false, K_PLACEMENT_REASON_DESTROY_TURRETS_COUNT, K_MINIMUM_TURRETS_FOR_DESTROY
+      payload.amount=K_MINIMUM_TURRETS_FOR_DESTROY
+      return false, K_PLACEMENT_REASON_DESTROY_TURRETS_COUNT, payload
     end
 
     -- possibility that this is to upgrade
@@ -207,17 +209,23 @@ function placement_placable()
         local static = static_get(static_id)
         if static and table.contains(static.tags, "upgradable") then
           if static.x == g_state.placement.x and static.y == g_state.placement.y then
-            
+            payload.upgradable_static_hover_id = static_id
+
+            if g_state.placement.upgrade_offset ~= 0 then
+              -- TODO: upgrade
+            end
           end
         end
       end
     end
 
     -- check that we have sufficient money
+    payload.cost = K_REMOVAL_COST
     if g_state.svy.money < K_REMOVAL_COST then
-      return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS, K_REMOVAL_COST
+      return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS, payload
+    else
+      return 2, K_PLACEMENT_REASON_DESTROY, payload
     end
-    return 2, K_PLACEMENT_REASON_DESTROY, K_REMOVAL_COST
   end
 
   -- check for direct collision with any other obstruction
@@ -227,7 +235,7 @@ function placement_placable()
     grid=g_state.placement.grid,
     mask=K_OBSTRUCTION
   }) then
-    return false, K_PLACEMENT_REASON_OBSTRUCTION
+    return false, K_PLACEMENT_REASON_OBSTRUCTION, payload
   end
 
   -- check that path would not be interrupted by placing this.
@@ -236,7 +244,7 @@ function placement_placable()
   board_pop_temporary_change()
 
   if not reachable then
-    return false, K_PLACEMENT_REASON_BLOCKING
+    return false, K_PLACEMENT_REASON_BLOCKING, payload
   end
 
   local _, tree_count = board_test_collides({
@@ -250,11 +258,13 @@ function placement_placable()
 
    -- check that we have sufficient money
    if g_state.svy.money < cost then
-     return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS, cost
+      payload.cost = cost
+     return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS, payload
   end
 
   -- can be placed.
-  return 1, 0, cost
+  payload.cost = cost
+  return 1, 0, payload
 end
 
 -- TODO: cleanup. this is messy.
@@ -275,6 +285,7 @@ function next_placement()
     dy = 1,
 
     -- upgrade offset for hovered-over static
+    -- 0 means do not upgrade
     upgrade_offset = 0,
   })
 
@@ -309,20 +320,22 @@ function set_placement(placement)
 end
 
 -- returns cache; refreshes cache if necessary
-function placement_get_cache()
+function placement_refresh_cache_if_dirty()
   local cache = g_state.placement_cache
   local placement = g_state.placement
   if cache.dirty then
     cache.dirty = false
     local placable, reason, payload = placement_placable()
-    if placable ~= cache.placable or reason ~= cache.reason or payload ~= cache.payload then
-      cache.show_message_timer = 0
+    if placable ~= cache.placable or reason ~= cache.reason or not table_equal(payload, cache.payload) then
+    cache.show_message_timer = 0
       cache.placable = placable
       cache.reason = reason
       cache.payload = payload
       cache.confirm = false
       cache.requires_confirm = (reason == K_PLACEMENT_REASON_DESTROY)
     end
+
+    -- check for potential turrets.
     if cache.placable == 1 or cache.reason == K_PLACEMENT_REASON_INSUFFICIENT_FUNDS then
       board_push_temporary_change_from_grid(placement.x, placement.y, placement.grid, K_OBSTRUCTION)
       cache.turret_potentials = turret_get_potentials_at_grid(
@@ -401,7 +414,7 @@ end
 
 function draw_placement()
   love.graphics.setColor(1, 1, 1, 0.8)
-  local cache = placement_get_cache()
+  local cache = placement_refresh_cache_if_dirty()
   local placement = g_state.placement
   if placement ~= nil and placement.type == "block" then
     local image = g_images.blocks[placement.color]
@@ -509,20 +522,20 @@ function draw_placement()
   end
 
   -- implacable reason
-  if cache.placable ~= 1 or cache.confirm or (cache.placable == 1 and cache.payload > K_PLACEMENT_COST) then
+  if cache.placable ~= 1 or cache.confirm or (cache.placable == 1 and cache.payload.cost > K_PLACEMENT_COST) then
     local text = K_PLACEMENT_REASON_TEXT[cache.reason]
     local glow = true
     if cache.reason == K_PLACEMENT_REASON_INSUFFICIENT_FUNDS then
-      text = "$" .. tostring(cache.payload) .. " Required"
+      text = "$" .. tostring(cache.payload.cost) .. " Required"
     end
-    if (cache.placable == 1) and cache.payload > K_PLACEMENT_COST then
-      text = "$" .. tostring(cache.payload)
+    if (cache.placable == 1) and cache.payload.cost > K_PLACEMENT_COST then
+      text = "$" .. tostring(cache.payload.cost)
       glow = false
     end
     if cache.confirm then
-      text = "Confirm: $" .. tostring(cache.payload)
+      text = "Confirm: $" .. tostring(cache.payload.cost)
     end
-    local show_message = cache.show_message_timer > 0 or cache.reason == K_PLACEMENT_REASON_BLOCKING or cache.reason == K_PLACEMENT_REASON_BORDER or cache.confirm or cache.placable == 2 or (cache.placable == 1 and cache.payload > K_PLACEMENT_COST)
+    local show_message = cache.show_message_timer > 0 or cache.reason == K_PLACEMENT_REASON_BLOCKING or cache.reason == K_PLACEMENT_REASON_BORDER or cache.confirm or cache.placable == 2 or (cache.placable == 1 and cache.payload.cost > K_PLACEMENT_COST)
 
     -- placement failure reason
     if text and show_message then
@@ -577,10 +590,10 @@ function placement_clear()
   effects_create_text(
     (placement.x + width2d(placement.grid) / 2) * k_dim_x,
     (placement.y + height2d(placement.grid) / 2) * k_dim_y,
-    "-$" .. tostring(cache.payload)
+    "-$" .. tostring(cache.payload.cost)
   )
 
-  g_state.svy.money = g_state.svy.money - cache.payload
+  g_state.svy.money = g_state.svy.money - cache.payload.cost
 
   -- slight effect
   camera_apply_shake(0.3, 1)
@@ -617,10 +630,10 @@ function placement_emplace()
   effects_create_text(
     (placement.x + width2d(placement.grid) / 2) * k_dim_x,
     (placement.y + height2d(placement.grid) / 2) * k_dim_y,
-    "-$" .. tostring(g_state.placement_cache.payload)
+    "-$" .. tostring(g_state.placement_cache.payload.cost)
   )
 
-  g_state.svy.money = g_state.svy.money - g_state.placement_cache.payload
+  g_state.svy.money = g_state.svy.money - g_state.placement_cache.payload.cost
 
   turret_emplace_potentials_at_grid(placement.x, placement.y, placement.grid, placement.dx, placement.dy)
 
@@ -655,6 +668,8 @@ function rotate_placement(dr, placement)
   end
 end
 
+-- swaps out the placement for the swap buffer (or advances to next placement).
+-- post-condition: swap buffer is full and placement is dirty.
 function placement_swap()
   local placement = g_state.placement
   if g_state.placement_swap then
@@ -665,11 +680,14 @@ function placement_swap()
   g_state.placement_swap = placement
 end
 
+-- player moving the placement ghost around.
 function update_placement(dt)
+  -- decrement message timer
   if g_state.placement_cache.show_message_timer > 0 then
     g_state.placement_cache.show_message_timer = g_state.placement_cache.show_message_timer - dt
   end
 
+  -- get input
   local dx, dy, dr = g_input_state.dx, g_input_state.dy, g_input_state.dr
 
   if g_state.placement then
@@ -708,7 +726,7 @@ function update_placement(dt)
     end
 
     if key_pressed("place") then
-      local cache = placement_get_cache()
+      local cache = placement_refresh_cache_if_dirty()
       if not cache.confirm and cache.requires_confirm then
         cache.confirm = true
       else

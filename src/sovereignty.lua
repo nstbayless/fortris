@@ -15,10 +15,12 @@ function svy_init()
     color = "purple",
     building_idxs = {castle_id},
     protectee_idxs = {castle_id},
-    money = tern(g_debug_mode, 300, 36),
+    money = tern(g_debug_mode, 300, 35),
     moneycap = 100,
     hp = 10,
-    hpmax = 10
+    hpmax = 10,
+    income_timer = 0,
+    income_rate = 1.5,
   }
 end
 
@@ -85,6 +87,16 @@ function svy_position_is_at_goal(x, y)
   end
 
   return false
+end
+
+function svy_update(dt)
+  local svy = g_state.svy
+  if g_state.placement_count > 2 then
+    svy.income_timer = svy.income_timer + dt * svy.income_rate
+    income_gained = math.floor(svy.income_timer)
+    svy_gain_bounty(income_gained)
+    svy.income_timer = svy.income_timer - income_gained
+  end
 end
 
 -- checks if position is reachable
@@ -183,6 +195,9 @@ function svy_draw_spiel()
     s = s .. "Controls:\n  Arrow Keys -> Move\n  A, S -> Rotate\n  Space -> Place\n"
   elseif g_state.spawn_timer <= 90 and g_state.placement_rotation_count < 4 then
     s = s .. "Controls:\n  A and S -> Rotate\n"
+  end
+  if g_state.spawn_timer <= 10 then
+    s = s .. "Money is gained over time.\n"
   end
   if g_state.game_over then
     s = ""

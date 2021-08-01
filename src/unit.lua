@@ -71,7 +71,7 @@ function unit_emplace(sprite, x, y, opts)
     health = opts.hp or opts.health or opts.hpmax or opts.healthmax or 4,
     healthmax = opts.hpmax or opts.healthmax or opts.hp or opts.health or 4,
     health_drain_indicator = opts.hp or opts.health or opts.hpmax or opts.healthmax or 4, -- TODO: just set health_drain_indicator = health
-    bounty = opts.bounty or 2,
+    bounty = opts.bounty or 0,
     breaker = opts.breaker or false, -- breaks walls
     squashable = tern(opts.squashable == nil, true, opts.squashable), -- can be crushed by placing a wall
 
@@ -205,7 +205,7 @@ function unit_splatter(id)
         })
       end
 
-      local squash_bounty = math.ceil(unit.bounty * 1.5)
+      local squash_bounty = math.max(2, math.ceil(unit.bounty * 1.5))
       g_state.kills = g_state.kills + 1
       effects_create_text(gx * k_dim_x, gy * k_dim_y, "$" .. tostring(squash_bounty))
       svy_gain_bounty(squash_bounty)
@@ -258,8 +258,10 @@ function unit_apply_damage(id, amount, effect)
       -- death
       unit.health = 0
       g_state.kills = g_state.kills + 1
-      svy_gain_bounty(unit.bounty)
-      effects_create_text(px, py, "$" .. tostring(unit.bounty))
+      if unit.bounty > 0 then
+        svy_gain_bounty(unit.bounty)
+        effects_create_text(px, py, "$" .. tostring(unit.bounty))
+      end
       unit_remove(id)
     end
   end

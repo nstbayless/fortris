@@ -28,6 +28,13 @@ function test_get_key_down(key)
         end
         return math.random() > 0.85
       end
+    elseif key == "pause" then
+      -- more likely to unpause than pause
+      if g_state.paused then
+        return math.random() > 0.7
+      else
+        return math.random() > 0.993
+      end
     end
     return math.random() > 0.94
   end

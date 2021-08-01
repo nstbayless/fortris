@@ -25,7 +25,7 @@ end
 
 k_dim_x = 32
 k_dim_y = 32
-k_version = "Fortris v0.7.11"
+k_version = "Fortris v0.8.0"
 k_shaders_supported = not g_is_lutro
 k_tile_canvas = true
 K_GAME_OVER_STOP_TIME = 3 -- how long it takes to fade out and stop after game over
@@ -301,31 +301,13 @@ function spawn_monsters(dt)
         local sx, sy = board_perimeter_location(math.random(board_perimeter()))
         if svy_pathfind_to_goal(sx, sy) then
           unit_emplace(g_images.goblin, sx, sy, {
-            hp = tern(g_state.spawn_timer < 30, 1, 0.5 + g_state.spawn_timer / 30),
-            bounty = get_monster_bounty()
+            hp = tern(g_state.spawn_timer < 30, 1, 0.5 + g_state.spawn_timer / 30)
           })
           break
         end
       end
     end
   end
-end
-
-function get_monster_bounty()
-  local bounty = 5
-  if g_state.spawn_timer > 60 then
-    bounty = 4
-  end
-  if g_state.spawn_timer > 120 then
-    bounty = 3
-  end
-  if g_state.spawn_timer > 170 then
-    bounty = 2
-  end
-  if g_state.spawn_timer > 240 then
-    bounty = 1
-  end
-  return bounty
 end
 
 function love.update(dt)
@@ -400,6 +382,7 @@ function love.update(dt)
   end
 
   if dt > 0 and not g_state.paused then
+    svy_update(dt)
     update_placement(dt)
     board_rubble_decay(dt)
 

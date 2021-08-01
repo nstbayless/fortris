@@ -14,6 +14,37 @@ function table.clone(orig)
   return copy
 end
 
+-- returns true if a == b or all elements of a equal all elements of b
+function table_equal(a, b)
+  return is_subset(a, b) and is_subset(b, a)
+end
+
+-- returns true if a is a table-subset of b
+-- this includes if a == b.
+function is_subset(a, b)
+  if a == b then
+    return true
+  end
+  if type(b) ~= type({}) then
+    return false
+  end
+  for key, value in pairs(a) do
+    if b[key] ~= value then
+      return false
+    end
+  end
+  return true
+end
+
+-- returns table a but with table b's elements replacing the associated elements in a
+function table_merge(a, b)
+  t = table.clone(a)
+  for key, value in pairs(b) do
+    t[key] = value
+  end
+  return t
+end
+
 function array_2d_get_bbox(arr, base_idx)
   local miny = nil
   local minx = nil
