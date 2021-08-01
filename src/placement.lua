@@ -496,7 +496,7 @@ function draw_placement()
     for y = placement.y - pathable_boundary_margin,placement.y + height2d(placement.grid) + pathable_boundary_margin -1 do
       -- only draw boundaries on tiles matching K_DISPLAY_EDGES which are impathable and not concealed
       if bit.band(board_get_value(x, y, 0), bit.band(K_DISPLAY_EDGES, K_IMPATHABLE)) ~= 0
-        and bit.band(board_get_value(x, y, K_FOG_OF_WAR), K_FOG_OF_WAR) == 0 then
+        and not board_position_concealed(x, y) then
         for xc = x - 1,x+1 do
           for yc = y-1,y+1 do
             if (xc == x and yc ~= y) or (xc ~= x and yc == y) then
@@ -506,7 +506,9 @@ function draw_placement()
                 local line_interval = 4
                 for j = 0,tern(g_is_lutro, 0, 2) do
                   local p = math.max(0.1, 1 - point_distance( centre_x, centre_y, xc + 0.5, yc + 0.5) / 8) * (1 - j / 3)
-                  love.graphics.setColor(0.9, 0.8, 1, (0.7 + math.sin(g_state.time * 3) * 0.1) * p)
+                  local is_in_fog = bit.band(board_get_value(x, y), K_FOG_OF_WAR) ~= 0
+                  local c_is_in_fog = bit.band(board_get_value(xc, yc), K_FOG_OF_WAR) ~= 0
+                  love.graphics.setColor(0.9, 0.8, 1, (0.7 + math.sin(g_state.time * 3) * 0.1) * p * tern(is_in_fog, 0.8, 1) * tern(c_is_in_fog, 0.7, 1))
                   if yc == y then
                     love.graphics.line(k_dim_x * (x + xc + 1) / 2 - dx * j * line_interval, k_dim_y * y + 1, k_dim_x * (x + xc + 1) / 2 - dx * j * line_interval, k_dim_y * (y + 1) - 1)
                   elseif xc == x then

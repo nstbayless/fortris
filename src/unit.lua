@@ -307,15 +307,7 @@ end
 function unit_check_concealed(id)
   local unit = unit_get(id)
   if unit then
-    unit.concealed = true
-    for x = -1,1 do
-      for y = -1,1 do
-        if bit.band(board_get_value(unit.x + x, unit.y + y, K_FOG_OF_WAR), K_FOG_OF_WAR) ==0 then
-          unit.concealed = false
-          return
-        end
-      end
-    end
+    unit.concealed = board_position_concealed(unit.x, unit.y)
   end
 end
 

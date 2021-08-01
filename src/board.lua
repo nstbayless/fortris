@@ -249,7 +249,23 @@ function board_rubble_decay(dt)
       })
     end
   end
+end
 
+-- checks if the given position is surrounded on all sides by fog of war
+-- r=1 distance to check for fog
+-- mask=K_FOG_OF_WAR
+function board_position_concealed(_x, _y, r, mask)
+  r = r or 1
+  mask = mask or K_FOG_OF_WAR
+  for x = -r,r do
+    for y = -r,r do
+      if bit.band(board_get_value(_x + x, _y + y, mask), mask) == 0 then
+        return false
+      end
+    end
+  end
+
+  return true
 end
 
 function board_draw_letterbox()
