@@ -74,6 +74,8 @@ local K_PLACEMENTS = {
 function init_placement()
   g_state.placement_idx = nil
   g_state.placement_queue = {}
+  g_state.placement_queue_offset = 0
+  g_state.placement_queue_velocity = 0
   g_state.placement_count = 0
   g_state.placement_swap = nil
   g_state.placement_rotation_count = 0
@@ -116,6 +118,9 @@ end
 function pop_placement()
   local i = peek_placement(0)
   table.remove(g_state.placement_queue, 1)
+  if g_state.placement_count > 3 then
+    g_state.placement_queue_offset = g_state.placement_queue_offset + 1 -- for animation
+  end
   return i
 end
 
@@ -373,9 +378,11 @@ function draw_placement_queue(x, y, n, s)
   s = s or 16
   n = n or 4
   for i = 0,n-1 do
-    love.graphics.setColor(1, 1, 1, math.clamp(a - 1 + p, 0, 1))
+    local yoffset = s * 4 * g_state.placement_queue_offset
+    local amult = math.clamp(n - i - g_state.placement_queue_offset, 0, 1)
+    love.graphics.setColor(1, 1, 1, math.clamp(a - 1 + p, 0, 1) * amult)
     local placement = K_PLACEMENTS[peek_placement(i)]
-    draw_placement_preview_centred(placement, x, y, s)
+    draw_placement_preview_centred(placement, x, y + yoffset, s)
     y = y + s * 4
     s = s * 0.9
     a = a * 0.8
@@ -683,7 +690,24 @@ function placement_swap()
 end
 
 -- player moving the placement ghost around.
+-- queue animation
 function update_placement(dt)
+  -- queue animation
+  if g_state.placement_queue_offset ~= 0 or g_state.placement_queue_velocity ~= 0 then
+    g_state.placement_queue_offset = g_state.placement_queue_offset + g_state.placement_queue_velocity * dt
+    g_state.placement_queue_velocity = g_state.placement_queue_velocity - dt * 6
+    if g_state.placement_queue_offset < 0 then
+      g_state.placement_queue_offset = -0.7 * g_state.placement_queue_offset
+      g_state.placement_queue_velocity = g_state.placement_queue_velocity + 2
+      if g_state.placement_queue_velocity > 0 then
+        g_state.placement_queue_offset = 0
+        g_state.placement_queue_velocity = 0
+      else
+        g_state.placement_queue_velocity = g_state.placement_queue_velocity * -0.4
+      end
+    end
+  end
+
   -- decrement message timer
   if g_state.placement_cache.show_message_timer > 0 then
     g_state.placement_cache.show_message_timer = g_state.placement_cache.show_message_timer - dt
