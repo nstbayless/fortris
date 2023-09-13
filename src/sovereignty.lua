@@ -21,6 +21,7 @@ function svy_init()
     hpmax = 10,
     income_timer = 0,
     income_rate = 1.5,
+    flood=Flood.new()
   }
 end
 
@@ -230,7 +231,7 @@ function svy_draw_spiel()
   end
 end
 
-function svy_draw_overlay()
+function svy_draw_hud()
   love.graphics.setColor(1, 1, 0.5)
 
   if g_state.paused then
@@ -274,4 +275,8 @@ function svy_draw_overlay()
   end
 
   love.graphics.setColor(1, 1, 1)
+end
+
+function svy_board_overlay_draw()
+  g_state.svy.flood:warning_draw()
 end

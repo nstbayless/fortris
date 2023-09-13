@@ -249,7 +249,7 @@ function placement_placable()
   board_pop_temporary_change()
 
   if not reachable then
-    return false, K_PLACEMENT_REASON_BLOCKING, payload
+    --return false, K_PLACEMENT_REASON_BLOCKING, payload
   end
 
   local _, tree_count = board_test_collides({

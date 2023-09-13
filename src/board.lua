@@ -20,7 +20,7 @@ K_VARIANTS = bit.bor(K_VARIANT, K_VARIANT2)
 K_REMOVE_IF_DESTROYED = bit.bor(K_STATIC, bit.bor(K_OBSTRUCTION, K_IMPATHABLE))
 
 -- board event types
-K_BOARD_EVENT_SET = 0
+K_BOARD_EVENT_SET = 0 -- occurs when tile changes
 K_BOARD_EVENT_RESIZE_BEGIN = 1
 K_BOARD_EVENT_RESIZE_END = 2
 
@@ -507,4 +507,54 @@ function board_pathfind(x, y, px, py)
     end
   end
   return path, length
+end
+
+-- Returns a list of points which are reachable from the given (x, y) coordinate
+function board_floodfill(x, y, obstruction_mask)
+  local visited = {}  -- Table to store visited coordinates
+  local queue = {}    -- Queue for BFS
+  local reachable = {}  -- Table to store reachable points
+
+  -- Initialize
+  table.insert(queue, {x = x, y = y})
+
+  while #queue > 0 do
+      local point = table.remove(queue, 1)
+      local x, y = point.x, point.y
+      
+      if not visited[x] then
+          visited[x] = {}
+      end
+
+      -- Check if the coordinate has already been visited
+      if not visited[x][y] then
+          -- Mark as visited
+          visited[x][y] = true
+
+          -- Check if the current cell is pathable
+          if bit.band(board_get_value(x, y), obstruction_mask) == 0 then
+              -- Add to reachable list
+              table.insert(reachable, {x = x, y = y})
+
+              -- Check and enqueue neighboring cells
+              for dx = -1, 1 do
+                  for dy = -1, 1 do
+                      if dx * dy == 0 and dx + dy ~= 0 then
+                          local new_x, new_y = x + dx, y + dy
+
+                          if not visited[new_x] then
+                              visited[new_x] = {}
+                          end
+
+                          if not visited[new_x][new_y] then
+                              table.insert(queue, {x = new_x, y = new_y})
+                          end
+                      end
+                  end
+              end
+          end
+      end
+  end
+
+  return reachable
 end

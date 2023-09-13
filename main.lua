@@ -52,6 +52,7 @@ require("src.pathfinding")
 require("src.board")
 require("src.static")
 require("src.turret")
+require("src.flood")
 require("src.sovereignty")
 require("src.effects")
 require("src.placement")
@@ -168,6 +169,7 @@ function love.load()
   g_images.rock = new_sprite("resources/images/pd/wyrmsun-cc0/rock.png", 32, 32)
   g_images.tree = new_sprite("resources/images/pd/wyrmsun-cc0/tree.png", 32, 32)
   g_images.border = new_sprite("resources/images/f/border.png", 16, 16)
+  g_images.warning = new_sprite("resources/images/f/warning.png", 16, 16)
   g_images.fog_of_war = new_sprite("resources/images/f/fog_of_war.png", 16, 16)
   g_images.blocks = {}
   for i, color in ipairs(k_block_colors) do
@@ -250,21 +252,20 @@ function love.draw()
       bgfx_draw(BGFX_LAYER.fog)
     end
     effects_draw()
+    svy_board_overlay_draw()
     board_draw_letterbox()
     if not g_state.game_over then
       draw_placement()
     end
-    if not g_is_lutro then
-      -- TODO: lutro (crash)
-      svy_draw_spiel()
-    end
+    -- TODO: lutro (crash)
+    svy_draw_spiel()
   end
   love.graphics.pop()
 
   -- not affected by camera
   if not g_is_lutro then
     -- TODO: lutro (crash)
-    svy_draw_overlay()
+    svy_draw_hud()
   end
 end
 
