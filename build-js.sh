@@ -1,3 +1,4 @@
+#requires npm -g i love.js
 set -e
 
 if [ -d jsbuild ]
