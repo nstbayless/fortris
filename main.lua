@@ -169,7 +169,7 @@ function love.load()
   g_images.rock = new_sprite("resources/images/pd/wyrmsun-cc0/rock.png", 32, 32)
   g_images.tree = new_sprite("resources/images/pd/wyrmsun-cc0/tree.png", 32, 32)
   g_images.border = new_sprite("resources/images/f/border.png", 16, 16)
-  g_images.warning = new_sprite("resources/images/f/warning.png", 16, 16)
+  g_images.warning = love.graphics.newImage("resources/images/f/warning.png")
   g_images.fog_of_war = new_sprite("resources/images/f/fog_of_war.png", 16, 16)
   g_images.blocks = {}
   for i, color in ipairs(k_block_colors) do

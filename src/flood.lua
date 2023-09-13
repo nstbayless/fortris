@@ -31,7 +31,7 @@ end
 
 function Flood:warning_draw()
     if self.sealed then
-        for tile in ipairs(self.flood_tiles) do
+        for i, tile in ipairs(self.flood_tiles) do
             draw_image_on_grid(
                 g_images.warning,
                 tile.x, tile.y, 1, 1

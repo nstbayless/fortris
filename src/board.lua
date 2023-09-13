@@ -532,9 +532,9 @@ function board_floodfill(x, y, obstruction_mask)
           visited[x][y] = true
 
           -- Check if the current cell is pathable
-          if bit.band(board_get_value(x, y), obstruction_mask) == 0 then
+          if bit.band(board_get_value(x, y), 0xFF) == 0 then
               -- Add to reachable list
-              table.insert(reachable, {x = x, y = y})
+              reachable[#reachable+1] = {x=x, y=y}
 
               -- Check and enqueue neighboring cells
               for dx = -1, 1 do
@@ -555,6 +555,6 @@ function board_floodfill(x, y, obstruction_mask)
           end
       end
   end
-
+  
   return reachable
 end
