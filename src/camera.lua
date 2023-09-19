@@ -8,7 +8,9 @@ function camera_init()
     h=h / k_dim_y,
     shake_x = 0,
     shake_y = 0,
-    shake_timer = 0
+    shake_timer = 0,
+    -- used for special offscreen-buffer drawing sections of code.
+    tmp_canvas = love.graphics.newCanvas(100, 100),
   }
 end
 
@@ -27,6 +29,9 @@ function camera_update(dt)
 
   -- update dimensions
   local w, h = love.graphics.getDimensions()
+  if w ~= camera.tmp_canvas:getWidth() or h ~= camera.tmp_canvas:getHeight() then
+    camera.tmp_canvas = love.graphics.newCanvas(w, h)
+  end
   camera.w = w / k_dim_x
   camera.h = h / k_dim_y
 
@@ -48,7 +53,7 @@ function camera_update(dt)
   end
 end
 
-function camera_apply_transform()
+function camera_get_scroll()
   local offx, offy = 0, 0
   local camera = g_state.camera
   local game_over_shake_multiplier = math.clamp(1 - g_state.game_over_timer / 2, 0, 1)
@@ -56,5 +61,34 @@ function camera_apply_transform()
     offx = offx + math.frandom(-camera.shake_x, camera.shake_x) * game_over_shake_multiplier
     offy = offy + math.frandom(-camera.shake_y, camera.shake_y) * game_over_shake_multiplier
   end
-  love.graphics.translate(math.round(-camera.x * k_dim_x + offx), math.round(-camera.y * k_dim_y + offy))
+  
+  return math.round(-camera.x * k_dim_x + offx), math.round(- camera.y * k_dim_y + offy)
+end
+
+function camera_apply_transform()
+  local x, y = camera_get_scroll()
+  love.graphics.translate(x, y)
+end
+
+function camera_update_temporary_canvas()
+  love.graphics.getDimensions()
+end
+
+function camera_begin_temporary_canvas()
+  local camera = g_state.camera
+  love.graphics.push()
+  love.graphics.origin()
+  love.graphics.setCanvas(camera.tmp_canvas)
+  love.graphics.push()
+  camera_apply_transform()
+  love.graphics.clear()
+end
+
+function camera_commit_temporary_canvas()
+  local camera = g_state.camera
+  
+  love.graphics.pop()
+  love.graphics.setCanvas()
+  love.graphics.draw(camera.tmp_canvas, 0, 0)
+  love.graphics.pop()
 end

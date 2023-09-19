@@ -57,9 +57,6 @@ function bgfx_refresh(bgfx)
     bgfx.canvas = love.graphics.newCanvas(k_dim_x * bgfx.w, k_dim_y * bgfx.h)
   end
 
-  -- lutro cannot update all the tiles in one frame; it's too slow.
-  --if g_is_lutro and g_state.time < 0.2 then return end
-
   love.graphics.setCanvas(bgfx.canvas)
 
   for y, x in board_iterate() do

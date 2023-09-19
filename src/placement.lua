@@ -465,11 +465,6 @@ function draw_placement()
         local interval = 3
         local offset = tern(cache.placable, g_state.time * 3, g_state.time)
         local ripple = nil
-        if g_is_lutro then
-          interval = 20
-          ripple = 4
-          offset = offset / 1.5
-        end
         draw_concentric_circles((turret.x + turret.w / 2) * k_dim_x, (turret.y + turret.h / 2) * k_dim_y, (props.min_range) * k_dim_x, props.max_range * k_dim_x, interval, offset, true, ripple)
       end
     end
@@ -511,7 +506,7 @@ function draw_placement()
                 -- this is a border, so we draw it.
                 local dx, dy = xc - x, yc - y
                 local line_interval = 4
-                for j = 0,tern(g_is_lutro, 0, 2) do
+                for j = 0,2 do
                   local p = math.max(0.1, 1 - point_distance( centre_x, centre_y, xc + 0.5, yc + 0.5) / 8) * (1 - j / 3)
                   local is_in_fog = bit.band(board_get_value(x, y), K_FOG_OF_WAR) ~= 0
                   local c_is_in_fog = bit.band(board_get_value(xc, yc), K_FOG_OF_WAR) ~= 0
@@ -557,9 +552,7 @@ function draw_placement()
       love.graphics.rectangle("fill", coordx, coordy, text_width, text_height)
 
       love.graphics.setColor(1, 0.8, 0.6, 0.9)
-      if not g_is_lutro then
-        love.graphics.printf(text, g_font_msg, coordx, coordy + 4, text_width, "center")
-      end
+      love.graphics.printf(text, g_font_msg, coordx, coordy + 4, text_width, "center")
     end
   end
 

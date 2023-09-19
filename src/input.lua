@@ -83,49 +83,34 @@ function input_init()
   }
 end
 
-if g_is_lutro then
-
-  -- lutro controls
-  function input_poll_key(keydata)
-    for _, jp_button in ipairs(keydata.lutro_joypad) do
-      if love.joystick.isDown(1, jp_button) then
+-- love2d controls
+function input_poll_key(keydata)
+  for _, key in ipairs(keydata.keyboard) do
+    if g_pre_input[key] and g_pre_input[key].pressed then
+      g_pre_input[key] = {}
+      return true
+    elseif g_pre_input[key] and g_pre_input[key].released then
+      g_pre_input[key] = {}
+      return false
+    else
+      if love.keyboard.isDown(key) then
         return true
       end
     end
-    return false
   end
+  return false
+end
 
-else
-
-  -- love2d controls
-  function input_poll_key(keydata)
-    for _, key in ipairs(keydata.keyboard) do
-      if g_pre_input[key] and g_pre_input[key].pressed then
-        g_pre_input[key] = {}
-        return true
-      elseif g_pre_input[key] and g_pre_input[key].released then
-        g_pre_input[key] = {}
-        return false
-      else
-        if love.keyboard.isDown(key) then
-          return true
-        end
-      end
-    end
-    return false
-  end
-
-  function love.keypressed( key, scancode, isrepeat )
-    if not isrepeat then
-      g_pre_input[key] = g_pre_input[key] or {}
-      g_pre_input[key].pressed = true
-    end
-  end
-
-  function love.keyreleased( key, scancode )
+function love.keypressed( key, scancode, isrepeat )
+  if not isrepeat then
     g_pre_input[key] = g_pre_input[key] or {}
-    g_pre_input[key].released = true
+    g_pre_input[key].pressed = true
   end
+end
+
+function love.keyreleased( key, scancode )
+  g_pre_input[key] = g_pre_input[key] or {}
+  g_pre_input[key].released = true
 end
 
 function update_input(dt)

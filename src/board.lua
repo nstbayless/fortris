@@ -274,9 +274,6 @@ function board_draw_letterbox()
   local m = 10000
   local board = g_state.board
   local num_borders = 10
-  if g_is_lutro then
-    num_borders = 3
-  end
   for i = 0,num_borders-1 do
     local p = i/num_borders
     local px = k_dim_x * (p + 0.5/num_borders) * 0.8

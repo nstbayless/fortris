@@ -39,3 +39,26 @@ function draw_sprite(sprite, t, x, y, r, sx, sy, fn)
   -- TODO: use ox, oy (origin offset)
   return fn(sprite.spriteSheet, sprite.quads[spriteNum], x - sx * sprite.offx, y - sy * sprite.offy, r, sx, sy)
 end
+
+function draw_sprite_on_grid(sprite, t, gx, gy, gw, gh, fn)
+  if sprite == nil or t >= #sprite.quads then
+    return
+  end
+  
+  gw = gw or 1
+  gh = gh or 1
+  
+  local spriteNum = (math.floor(t)) + 1
+  local quad = sprite.quads[spriteNum]
+  local _, _, w, h = quad:getViewport()
+  
+  local sx = gw * k_dim_x / w
+  local sy = gh * k_dim_y / h
+  
+  local x = gx * k_dim_x
+  local y = gy * k_dim_y
+  local r = 0
+  
+  fn = fn or love.graphics.draw
+  love.graphics.draw(sprite.spriteSheet, quad, x - sx * sprite.offx, y - sy * sprite.offy, r, sx, sy)
+end

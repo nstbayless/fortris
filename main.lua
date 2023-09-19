@@ -3,8 +3,6 @@ if arg and arg[#arg] == "vsc_debug" then require("lldebugger").start() end
 
 -- operating system
 g_os = love.system.getOS()
--- lutro has a number of limitations, so there are various checks against it throughout the code base
-g_is_lutro = g_os:lower() == "lutro"
 
 -- paranoia / future-proofing against love.js changes...
 g_is_web = g_os:lower() == "web" or g_os:lower() == "browser" or g_os:lower() == "firefox" or g_os:lower() == "chrome" or g_os:lower() == "emscripten"
@@ -13,9 +11,6 @@ if g_is_web then
   -- JavaScript ffi
   require("ext.js")
 end
-if g_is_lutro then
-  require("src.lutro_compat")
-end
 
 -- supply missing library if needed
 if not bit then
@@ -23,12 +18,15 @@ if not bit then
   assert(bit.band and bit.bnot and bit.bor)
 end
 
+-- constants
 k_dim_x = 32
 k_dim_y = 32
 k_version = "Fortris v0.8.1"
-k_shaders_supported = not g_is_lutro
+k_shaders_supported = true
 k_tile_canvas = true
 K_GAME_OVER_STOP_TIME = 3 -- how long it takes to fade out and stop after game over
+K_WARN_STRIPE_SPEED = 7
+K_WARNING_BLINK_INTERVAL = 2
 
 k_block_colors = {"blue", "darkgray", "gray", "green", "lightblue", "orange", "yellow", "pink", "purple", "red", "red2", "white"}
 
@@ -146,15 +144,9 @@ function love.load()
   g_shaders.game_over = k_shaders_supported and love.graphics.newShader("resources/shaders/game_over.shader")
 
   love.graphics.setDefaultFilter("linear", "nearest")
-  if g_is_lutro then
-    g_font = love.graphics.newImageFont( 'resources/images/u/font_example_24.png', ' ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789' )
-    g_font_msg = love.graphics.newImageFont( 'resources/images/u/font_example.png', ' ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789' )
-    g_font_effect = love.graphics.newImageFont( 'resources/images/u/font_example.png', ' ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789' )
-  else
-    g_font = love.graphics.newFont("resources/fonts/ofl/autobahn/autobahn.ttf", 27, "normal", dpi())
-    g_font_msg = love.graphics.newFont("resources/fonts/ofl/Gamaliel/Gamaliel.otf", 20, "normal", dpi())
-    g_font_effect = love.graphics.newFont("resources/fonts/ofl/triod-postnaja/TriodPostnaja.ttf", 15, "normal", dpi())
-  end
+  g_font = love.graphics.newFont("resources/fonts/ofl/autobahn/autobahn.ttf", 27, "normal", dpi())
+  g_font_msg = love.graphics.newFont("resources/fonts/ofl/Gamaliel/Gamaliel.otf", 20, "normal", dpi())
+  g_font_effect = love.graphics.newFont("resources/fonts/ofl/triod-postnaja/TriodPostnaja.ttf", 15, "normal", dpi())
   g_images.grass = love.graphics.newImage("resources/images/f/checkered-grass.png")
   g_images.castle = love.graphics.newImage("resources/images/pd/wyrmsun-cc0/town_hall.png")
   g_images.goblin = new_sprite("resources/images/cl/wyrmsun-gpl/goblin_spearman.png", 72, 72, 72/2, 72/2 + 5)
@@ -169,7 +161,9 @@ function love.load()
   g_images.rock = new_sprite("resources/images/pd/wyrmsun-cc0/rock.png", 32, 32)
   g_images.tree = new_sprite("resources/images/pd/wyrmsun-cc0/tree.png", 32, 32)
   g_images.border = new_sprite("resources/images/f/border.png", 16, 16)
+  g_images.warnborder = new_sprite("resources/images/f/warnborder.png", 16, 16)
   g_images.warning = love.graphics.newImage("resources/images/f/warning.png")
+  g_images.warnstripes = new_sprite("resources/images/f/warnstripes.png", 16, 16)
   g_images.fog_of_war = new_sprite("resources/images/f/fog_of_war.png", 16, 16)
   g_images.blocks = {}
   for i, color in ipairs(k_block_colors) do
@@ -218,9 +212,7 @@ function love.draw()
   love.graphics.setColor(1, 1, 1)
   love.graphics.setBackgroundColor(0,0,0)
   love.graphics.push()
-  if not g_is_lutro then
-    camera_apply_transform()
-  end
+  camera_apply_transform()
 
   -- global shader
   if k_shaders_supported then
@@ -263,10 +255,7 @@ function love.draw()
   love.graphics.pop()
 
   -- not affected by camera
-  if not g_is_lutro then
-    -- TODO: lutro (crash)
-    svy_draw_hud()
-  end
+  svy_draw_hud()
 end
 
 function spawn_monsters(dt)
@@ -394,7 +383,7 @@ function love.update(dt)
   end
   camera_update(dt)
 
-  if not g_is_lutro and demo_is_recording() and key_pressed("save_demo") then
+  if demo_is_recording() and key_pressed("save_demo") then
     demo_save()
   end
 end
