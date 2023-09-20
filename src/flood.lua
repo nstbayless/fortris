@@ -66,7 +66,7 @@ function Flood:warning_draw()
       end
     end
     
-    local alpha = math.sin(math.tau / K_WARNING_BLINK_INTERVAL * g_state.time) * 0.5 + 0.5
+    local alpha = math.sin(math.tau / K_WARNING_BLINK_INTERVAL * g_state.real_time) * 0.5 + 0.5
     love.graphics.setColor(1, 1, 1, alpha)
     camera_commit_temporary_canvas()
     love.graphics.setColor(1, 1, 1, 1)

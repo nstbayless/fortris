@@ -26,6 +26,8 @@ function svy_init()
     drown_warning_timer = 0,
     drown_warning_count = 3,
     free_drown_destroys = 2,
+    damage_timer = 0, -- screen turns red a bit
+    post_destroy_timer = 0, -- counts down after a destroy occurs
   }
 end
 
@@ -47,6 +49,7 @@ function svy_lose_hp(amount)
   g_state.svy.hp = g_state.svy.hp - amount
   local time = 0.5 - math.min(g_state.svy.hp / 10, 0.3)
   camera_apply_shake(time, 3, 4)
+  g_state.svy.damage_timer = time
   if g_state.svy.hp <= 0 then
     g_state.game_over = true
   end
@@ -97,6 +100,23 @@ end
 
 function svy_update(dt)
   local svy = g_state.svy
+  
+  -- damage timer
+  if svy.damage_timer > 0 then
+    svy.damage_timer = svy.damage_timer - dt
+  end
+  
+  -- destroy timer
+  if svy.post_destroy_timer > 0 then
+    svy.post_destroy_timer = svy.post_destroy_timer - dt * 0.2
+  end
+  
+  -- reset this timer if a player presses any button.
+  if g_input_state.dx ~= 0 or g_input_state.dy ~= 0 or g_input_state.dr ~= 0 then
+    svy.post_destroy_timer = 0
+  end
+  
+  -- gain income
   if g_state.placement_count > 2 then
     svy.income_timer = svy.income_timer + dt * svy.income_rate
     income_gained = math.floor(svy.income_timer)
@@ -289,6 +309,13 @@ function svy_draw_spiel()
 end
 
 function svy_draw_hud()
+  -- flash on damage
+  local svy = g_state.svy
+  if svy.damage_timer > 0 and not g_state.paused then
+    love.graphics.setColor(1, 0, 0, svy.damage_timer)
+    love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+  end
+  
   love.graphics.setColor(1, 1, 0.5)
 
   if g_state.paused then

@@ -154,6 +154,7 @@ K_PLACEMENT_REASON_BLOCKING = 3
 K_PLACEMENT_REASON_SHROUD = 4
 K_PLACEMENT_REASON_BORDER = 5
 K_PLACEMENT_REASON_DESTROY = 6
+K_PLACEMENT_REASON_DESTROY_FREE = 7
 
 K_PLACEMENT_REASON_TEXT = {
   "Insufficient Funds",
@@ -162,6 +163,7 @@ K_PLACEMENT_REASON_TEXT = {
   "Shroud",
   "Edge",
   "Destroy",
+  "Destroy", -- free
 }
 
 -- returns 1 if current placement could be validly emplaced at its current location,
@@ -220,10 +222,10 @@ function placement_placable()
     -- check that we have sufficient money to destroy, or at least
     -- that we have a free drowning destroy
     payload.cost = K_REMOVAL_COST
+    if svy_is_drowning() and g_state.svy.free_drown_destroys > 0 then
+      return 2, K_PLACEMENT_REASON_DESTROY_FREE, payload
+    end
     if g_state.svy.money < K_REMOVAL_COST then
-      if svy_is_drowning() and g_state.svy.free_drown_destroys > 0 then
-        return 2, K_PLACEMENT_REASON_DESTROY, payload
-      end
       return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS, payload
     else
       return 2, K_PLACEMENT_REASON_DESTROY, payload
@@ -329,7 +331,7 @@ function placement_refresh_cache_if_dirty()
     cache.dirty = false
     local placable, reason, payload = placement_placable()
     if placable ~= cache.placable or reason ~= cache.reason or not table_equal(payload, cache.payload) then
-    cache.show_message_timer = 0
+      cache.show_message_timer = 0
       cache.placable = placable
       cache.reason = reason
       cache.payload = payload
@@ -456,7 +458,9 @@ function draw_placement()
       
       if not svy_is_drowning() then
         -- turret range circles
-        love.graphics.setColor(1, 1, tern(cache.placable, 0.5, 1), tern(cache.placable, 0.8 + 0.03 * (math.sin(g_state.time * math.tau / 2)), 0.4))
+        local alpha = 0.9 * math.clamp((1 - g_state.svy.post_destroy_timer), 0, 1)
+        local blue = tern(cache.placable, 0.5, 1)
+        love.graphics.setColor(1, 1, blue, alpha * tern(cache.placable, 0.8 + 0.03 * (math.sin(g_state.time * math.tau / 2)), 0.4))
         for idx, turret in pairs(cache.turret_potentials) do
           local props = turret_get_props_by_size(turret.size)
 
@@ -584,7 +588,6 @@ function placement_clear()
   for yo, xo, v in array_2d_iterate(g_state.placement.grid, 0) do
     if v ~= 0 then
       local removed = static_destroy_at(xo + g_state.placement.x, yo + g_state.placement.y)
-      print("remove:", xo, yo, removed)
     end
   end
 
@@ -754,6 +757,7 @@ function update_placement(dt)
           placement_emplace()
         elseif cache.placable == 2 then
           placement_clear()
+          g_state.svy.post_destroy_timer = 1
         else
           -- show reason why it can't be placed.
           cache.show_message_timer = 2.7
