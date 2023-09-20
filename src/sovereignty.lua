@@ -21,7 +21,11 @@ function svy_init()
     hpmax = 10,
     income_timer = 0,
     income_rate = 1.5,
-    flood=Flood.new()
+    flood=Flood.new(),
+    drown_timer = -K_INITIAL_DROWN_GRACE,
+    drown_warning_timer = 0,
+    drown_warning_count = 3,
+    free_drown_destroys = 2,
   }
 end
 
@@ -41,7 +45,8 @@ end
 function svy_lose_hp(amount)
   amount = amount or 1
   g_state.svy.hp = g_state.svy.hp - amount
-  camera_apply_shake(0.2, 2, 3)
+  local time = 0.5 - math.min(g_state.svy.hp / 10, 0.3)
+  camera_apply_shake(time, 3, 4)
   if g_state.svy.hp <= 0 then
     g_state.game_over = true
   end
@@ -97,6 +102,33 @@ function svy_update(dt)
     income_gained = math.floor(svy.income_timer)
     svy_gain_bounty(income_gained)
     svy.income_timer = svy.income_timer - income_gained
+  end
+  
+  -- drown warning
+  if svy.drown_warning_timer >= 0 then
+    if svy.flood.sealed then
+      svy.drown_warning_timer = svy.drown_warning_timer + dt
+    elseif svy.drown_warning_timer >= 5 then
+      if svy.drown_warning_count <= 0 then
+        svy.drown_warning_timer = -1
+      else
+        svy.drown_warning_count = svy.drown_warning_count - 1
+        svy.drown_warning_timer = 0
+      end
+    else
+      svy.drown_warning_timer = 0
+    end
+  end
+  
+  -- actual drowning
+  if svy.flood.sealed then
+    svy.drown_timer = svy.drown_timer + dt
+    if svy.drown_timer >= K_DROWN_GRACE then
+      svy.drown_timer = svy.drown_timer - K_DROWN_INTERVAL
+      svy_lose_hp()
+    end
+  else
+    svy.drown_timer = math.min(0, svy.drown_timer)
   end
 end
 
@@ -181,9 +213,10 @@ function svy_goal_reachable()
 end
 
 function svy_draw_spiel()
+  local svy = g_state.svy
   assert(g_state.spiel_x and g_state.spiel_y)
 
-  if g_debug_mode or g_state.paused then
+  if g_state.paused then
     return
   end
 
@@ -200,9 +233,26 @@ function svy_draw_spiel()
   if g_state.spawn_timer <= 10 then
     s = s .. "Money is gained over time.\n"
   end
+  
+  if g_debug_mode then
+    s = ""
+  end
+  
+  if svy.drown_warning_timer >= 3 then
+    -- red
+    love.graphics.setColor(1, 0.2, 0.2)
+    
+    -- blink
+    if g_state.real_time % 2 < 0.2 then
+      return
+    end
+    s = "Water level rising!\n\nLet the water out!\n\nDestroy walls by placing\na block fully overtop."
+  end
+  
   if g_state.game_over then
     s = ""
   end
+  
   if s ~= "" then
     local text = get_cached_text(g_font, s:trim())
 
@@ -226,8 +276,15 @@ function svy_draw_spiel()
     if g_state.spiel_x <= g_state.board.left + 3 or g_state.spiel_x >= g_state.board.right - 3 then
        return
     end
+    
+    local r, g, b, a = love.graphics.getColor()
 
-    love.graphics.draw(text, k_dim_x * g_state.spiel_x - text:getWidth() / 2, k_dim_y * g_state.spiel_y - 50)
+    local x = k_dim_x * g_state.spiel_x - text:getWidth() / 2
+    local y = k_dim_y * g_state.spiel_y - 50
+    love.graphics.setColor(0, 0, 0, 0.7)
+    love.graphics.draw(text, x+2, y+2)
+    love.graphics.setColor(r, g, b, a)
+    love.graphics.draw(text, x, y)
   end
 end
 
@@ -279,4 +336,17 @@ end
 
 function svy_board_overlay_draw()
   g_state.svy.flood:warning_draw()
+end
+
+function svy_time_rate()
+  local svy = g_state.svy
+  local factor = 1
+  if svy.drown_timer >= 1 then
+    factor = factor * lerp(math.clamp(svy.drown_timer - 1, 0, 1), 1, K_DROWN_TIME_SLOW_FACTOR)
+  end
+  return factor
+end
+
+function svy_is_drowning()
+  return g_state.svy.flood.sealed
 end

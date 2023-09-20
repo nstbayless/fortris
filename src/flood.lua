@@ -54,7 +54,7 @@ function Flood:warning_draw()
       local ntype = self.flood_map:getNeighbourhood5Type(tile.x, tile.y)
       draw_sprite_on_grid(
         g_images.warnstripes,
-        (g_state.time * K_WARN_STRIPE_SPEED) % 4,
+        (g_state.real_time * K_WARN_STRIPE_SPEED) % 4,
         tile.x, tile.y, 1, 1
       )
       if ntype < 15 then

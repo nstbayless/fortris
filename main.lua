@@ -27,6 +27,10 @@ k_tile_canvas = true
 K_GAME_OVER_STOP_TIME = 3 -- how long it takes to fade out and stop after game over
 K_WARN_STRIPE_SPEED = 7
 K_WARNING_BLINK_INTERVAL = 2
+K_INITIAL_DROWN_GRACE = 4
+K_DROWN_GRACE = 4
+K_DROWN_INTERVAL = 2
+K_DROWN_TIME_SLOW_FACTOR = 0.6
 
 k_block_colors = {"blue", "darkgray", "gray", "green", "lightblue", "orange", "yellow", "pink", "purple", "red", "red2", "white"}
 
@@ -76,7 +80,8 @@ function init_state()
   -- not including certain caches and fully-encapsulated (and re-initializable) module state
   -- and certain configuration values.
   g_state = {
-    time = 0,
+    time = 0, -- in-game time; doesn't always pass 1:1 with real time.
+    real_time = 0, -- passes in real time
     spawn_rate = 1/5,
     spawn_progress = 0.5,
     heal_timer = 0,
@@ -249,7 +254,6 @@ function love.draw()
     if not g_state.game_over then
       draw_placement()
     end
-    -- TODO: lutro (crash)
     svy_draw_spiel()
   end
   love.graphics.pop()
@@ -337,6 +341,10 @@ function love.update(dt)
       end
     end
   end
+  
+  g_state.real_time = g_state.real_time + dt
+  
+  dt = dt * svy_time_rate()
 
   if not g_state.paused then
     g_state.time = g_state.time + dt

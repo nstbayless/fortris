@@ -154,7 +154,6 @@ K_PLACEMENT_REASON_BLOCKING = 3
 K_PLACEMENT_REASON_SHROUD = 4
 K_PLACEMENT_REASON_BORDER = 5
 K_PLACEMENT_REASON_DESTROY = 6
-K_PLACEMENT_REASON_DESTROY_TURRETS_COUNT = 7
 
 K_PLACEMENT_REASON_TEXT = {
   "Insufficient Funds",
@@ -163,7 +162,6 @@ K_PLACEMENT_REASON_TEXT = {
   "Shroud",
   "Edge",
   "Destroy",
-  "Need " .. tostring(K_MINIMUM_TURRETS_FOR_DESTROY) .. " Turrets First"
 }
 
 -- returns 1 if current placement could be validly emplaced at its current location,
@@ -201,11 +199,6 @@ function placement_placable()
     mask=K_WALL,
     cvalue = K_WALL
   }) then
-    -- check that destroying (or upgrading) is available
-    if not g_debug_mode and g_state.statics_count["turret"] < K_MINIMUM_TURRETS_FOR_DESTROY then
-      payload.amount=K_MINIMUM_TURRETS_FOR_DESTROY
-      return false, K_PLACEMENT_REASON_DESTROY_TURRETS_COUNT, payload
-    end
 
     -- possibility that this is to upgrade
     if g_state.placement.can_upgrade then
@@ -224,9 +217,13 @@ function placement_placable()
       end
     end
 
-    -- check that we have sufficient money
+    -- check that we have sufficient money to destroy, or at least
+    -- that we have a free drowning destroy
     payload.cost = K_REMOVAL_COST
     if g_state.svy.money < K_REMOVAL_COST then
+      if svy_is_drowning() and g_state.svy.free_drown_destroys > 0 then
+        return 2, K_PLACEMENT_REASON_DESTROY, payload
+      end
       return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS, payload
     else
       return 2, K_PLACEMENT_REASON_DESTROY, payload
@@ -456,16 +453,19 @@ function draw_placement()
         -- fill rect
         love.graphics.rectangle("fill", turret.x * k_dim_x + margin, turret.y * k_dim_y + margin, turret.w * k_dim_x - 2 * margin, turret.h * k_dim_y - 2 * margin)
       end
+      
+      if not svy_is_drowning() then
+        -- turret range circles
+        love.graphics.setColor(1, 1, tern(cache.placable, 0.5, 1), tern(cache.placable, 0.8 + 0.03 * (math.sin(g_state.time * math.tau / 2)), 0.4))
+        for idx, turret in pairs(cache.turret_potentials) do
+          local props = turret_get_props_by_size(turret.size)
 
-      love.graphics.setColor(1, 1, tern(cache.placable, 0.5, 1), tern(cache.placable, 0.8 + 0.03 * (math.sin(g_state.time * math.tau / 2)), 0.4))
-      for idx, turret in pairs(cache.turret_potentials) do
-        local props = turret_get_props_by_size(turret.size)
-
-        -- range circle
-        local interval = 3
-        local offset = tern(cache.placable, g_state.time * 3, g_state.time)
-        local ripple = nil
-        draw_concentric_circles((turret.x + turret.w / 2) * k_dim_x, (turret.y + turret.h / 2) * k_dim_y, (props.min_range) * k_dim_x, props.max_range * k_dim_x, interval, offset, true, ripple)
+          -- range circle
+          local interval = 3
+          local offset = tern(cache.placable, g_state.time * 3, g_state.time)
+          local ripple = nil
+          draw_concentric_circles((turret.x + turret.w / 2) * k_dim_x, (turret.y + turret.h / 2) * k_dim_y, (props.min_range) * k_dim_x, props.max_range * k_dim_x, interval, offset, true, ripple)
+        end
       end
     end
 
