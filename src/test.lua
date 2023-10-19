@@ -10,7 +10,7 @@ end
 
 function test_update(dt)
   g_state.svy.hp = 10
-  svy_gain_bounty(poisson(1, dt))
+  --svy_gain_bounty(poisson(1, dt))
 end
 
 function test_get_key_down(key)

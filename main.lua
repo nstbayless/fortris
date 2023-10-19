@@ -30,6 +30,7 @@ K_INITIAL_DROWN_GRACE = 4
 K_DROWN_GRACE = 4
 K_DROWN_INTERVAL = 2
 K_DROWN_TIME_SLOW_FACTOR = 0.6
+K_USE_MONEY = false
 
 k_block_colors = {"blue", "darkgray", "gray", "green", "lightblue", "orange", "yellow", "pink", "purple", "red", "red2", "white"}
 

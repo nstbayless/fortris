@@ -15,8 +15,6 @@ function svy_init()
     color = "purple",
     building_idxs = {castle_id},
     protectee_idxs = {castle_id},
-    money = tern(g_debug_mode, 300, 35),
-    moneycap = 100,
     hp = 10, -- TODO: hp bar
     hpmax = 10,
     income_timer = 0,
@@ -29,18 +27,25 @@ function svy_init()
     damage_timer = 0, -- screen turns red a bit
     post_destroy_timer = 0, -- counts down after a destroy occurs
   }
+  
+  if K_USE_MONEY then
+    g_state.money = tern(g_debug_mode, 300, 35)
+    g_state.moneycap = 100
+  end
 end
 
-function svy_gain_bounty(amount)
-  if amount > 0 and g_state.svy.money < g_state.svy.moneycap then
-    g_state.svy.money = g_state.svy.money + amount
+if K_USE_MONEY then
+  function svy_gain_bounty(amount)
+    if amount > 0 and g_state.svy.money < g_state.svy.moneycap then
+      g_state.svy.money = g_state.svy.money + amount
 
-    -- clamp
-    g_state.svy.money = math.min(g_state.svy.money, g_state.svy.moneycap)
+      -- clamp
+      g_state.svy.money = math.min(g_state.svy.money, g_state.svy.moneycap)
 
-    -- TODO -- make this by observer.
-    -- (placement cache depends on whether or not there are enough funds for the blocks)
-    placement_set_dirty()
+      -- TODO -- make this by observer.
+      -- (placement cache depends on whether or not there are enough funds for the blocks)
+      placement_set_dirty()
+    end
   end
 end
 
@@ -117,11 +122,13 @@ function svy_update(dt)
   end
   
   -- gain income
-  if g_state.placement_count > 2 then
-    svy.income_timer = svy.income_timer + dt * svy.income_rate
-    income_gained = math.floor(svy.income_timer)
-    svy_gain_bounty(income_gained)
-    svy.income_timer = svy.income_timer - income_gained
+  if K_USE_MONEY then
+    if g_state.placement_count > 2 then
+      svy.income_timer = svy.income_timer + dt * svy.income_rate
+      income_gained = math.floor(svy.income_timer)
+      svy_gain_bounty(income_gained)
+      svy.income_timer = svy.income_timer - income_gained
+    end
   end
   
   -- drown warning
@@ -250,8 +257,11 @@ function svy_draw_spiel()
   elseif g_state.spawn_timer <= 90 and g_state.placement_rotation_count < 4 then
     s = s .. "Controls:\n  A and S -> Rotate\n"
   end
-  if g_state.spawn_timer <= 10 then
-    s = s .. "Money is gained over time.\n"
+  
+  if K_USE_MONEY then
+    if g_state.spawn_timer <= 10 then
+      s = s .. "Money is gained over time.\n"
+    end
   end
   
   if g_debug_mode then
@@ -332,7 +342,10 @@ function svy_draw_hud()
     
     love.graphics.draw(text, 4, 4)
   elseif not g_state.paused then
-    local s = "Treasury:$" .. tostring(g_state.svy.money) .. tern(g_state.svy.money < g_state.svy.moneycap, "", " [Limit!]")
+    local s = ""
+    if K_USE_MONEY then
+      s = "Treasury:$" .. tostring(g_state.svy.money) .. tern(g_state.svy.money < g_state.svy.moneycap, "", " [Limit!]")
+    end
     local text = get_cached_text(g_font, s)
     love.graphics.draw(text, 4, 4)
     text = get_cached_text(g_font, "Fortress:" .. tostring(g_state.svy.hp))

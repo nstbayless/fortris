@@ -201,32 +201,19 @@ function placement_placable()
     mask=K_WALL,
     cvalue = K_WALL
   }) then
-
-    -- possibility that this is to upgrade
-    if g_state.placement.can_upgrade then
-      local static_id = static_at(g_state.placement.x, g_state.placement.y)
-      if static_id then
-        local static = static_get(static_id)
-        if static and table.contains(static.tags, "upgradable") then
-          if static.x == g_state.placement.x and static.y == g_state.placement.y then
-            payload.upgradable_static_hover_id = static_id
-
-            if g_state.placement.upgrade_offset ~= 0 then
-              -- TODO: upgrade
-            end
-          end
-        end
+    
+    if K_USE_MONEY then
+      -- check that we have sufficient money to destroy, or at least
+      -- that we have a free drowning destroy
+      payload.cost = K_REMOVAL_COST
+      if svy_is_drowning() and g_state.svy.free_drown_destroys > 0 then
+        return 2, K_PLACEMENT_REASON_DESTROY_FREE, payload
       end
-    end
-
-    -- check that we have sufficient money to destroy, or at least
-    -- that we have a free drowning destroy
-    payload.cost = K_REMOVAL_COST
-    if svy_is_drowning() and g_state.svy.free_drown_destroys > 0 then
-      return 2, K_PLACEMENT_REASON_DESTROY_FREE, payload
-    end
-    if g_state.svy.money < K_REMOVAL_COST then
-      return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS, payload
+      if g_state.svy.money < K_REMOVAL_COST then
+        return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS, payload
+      else
+        return 2, K_PLACEMENT_REASON_DESTROY, payload
+      end
     else
       return 2, K_PLACEMENT_REASON_DESTROY, payload
     end
@@ -251,23 +238,26 @@ function placement_placable()
     --return false, K_PLACEMENT_REASON_BLOCKING, payload
   end
 
-  local _, tree_count = board_test_collides({
-    all = true, -- need this to get accurate count
-    x=g_state.placement.x,
-    y=g_state.placement.y,
-    grid=g_state.placement.grid,
-    mask=K_TREE
-  })
-  local cost = K_PLACEMENT_COST + 2 * tree_count
+  if K_USE_MONEY then
+    local _, tree_count = board_test_collides({
+      all = true, -- need this to get accurate count
+      x=g_state.placement.x,
+      y=g_state.placement.y,
+      grid=g_state.placement.grid,
+      mask=K_TREE
+    })
+    local cost = K_PLACEMENT_COST + 2 * tree_count
 
-   -- check that we have sufficient money
-   if g_state.svy.money < cost then
-      payload.cost = cost
-     return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS, payload
+    -- check that we have sufficient money
+    if g_state.svy.money < cost then
+        payload.cost = cost
+      return false, K_PLACEMENT_REASON_INSUFFICIENT_FUNDS, payload
+    end
+    
+    -- can be placed.
+    payload.cost = cost
   end
-
-  -- can be placed.
-  payload.cost = cost
+  
   return 1, 0, payload
 end
 
@@ -530,7 +520,24 @@ function draw_placement()
   end
 
   -- implacable reason
-  if cache.placable ~= 1 or cache.confirm or (cache.placable == 1 and cache.payload.cost > K_PLACEMENT_COST) then
+  
+  local display_placement_message = true
+  
+
+  if cache.placable == 1 then
+    -- if placable, we hide message unless there is a reason to show it.
+    display_placement_message = false
+    
+    -- show message if in "confirm" state
+    if cache.confirm then display_placement_message = true end
+    
+    -- show message if cost is greater than usual
+    if cache.payload.cost and cache.payload.cost > K_PLACEMENT_COST then
+      display_placement_message = true
+    end
+  end
+  
+  if display_placement_message then
     local text = K_PLACEMENT_REASON_TEXT[cache.reason]
     local glow = true
     if cache.reason == K_PLACEMENT_REASON_INSUFFICIENT_FUNDS then
@@ -592,13 +599,15 @@ function placement_clear()
   end
 
   -- money cost effect
-  effects_create_text(
-    (placement.x + width2d(placement.grid) / 2) * k_dim_x,
-    (placement.y + height2d(placement.grid) / 2) * k_dim_y,
-    "-$" .. tostring(cache.payload.cost)
-  )
+  if cache.payload.cost then
+    effects_create_text(
+      (placement.x + width2d(placement.grid) / 2) * k_dim_x,
+      (placement.y + height2d(placement.grid) / 2) * k_dim_y,
+      "-$" .. tostring(cache.payload.cost)
+    )
 
-  g_state.svy.money = g_state.svy.money - cache.payload.cost
+    g_state.svy.money = g_state.svy.money - cache.payload.cost
+  end
 
   -- slight effect
   camera_apply_shake(0.3, 1)
@@ -631,14 +640,16 @@ function placement_emplace()
   })
   assert(success)
 
-  -- money cost effect
-  effects_create_text(
-    (placement.x + width2d(placement.grid) / 2) * k_dim_x,
-    (placement.y + height2d(placement.grid) / 2) * k_dim_y,
-    "-$" .. tostring(g_state.placement_cache.payload.cost)
-  )
+  if g_state.placement_cache.payload.cost then
+    -- money cost effect
+    effects_create_text(
+      (placement.x + width2d(placement.grid) / 2) * k_dim_x,
+      (placement.y + height2d(placement.grid) / 2) * k_dim_y,
+      "-$" .. tostring(g_state.placement_cache.payload.cost)
+    )
 
-  g_state.svy.money = g_state.svy.money - g_state.placement_cache.payload.cost
+    g_state.svy.money = g_state.svy.money - g_state.placement_cache.payload.cost
+  end
 
   turret_emplace_potentials_at_grid(placement.x, placement.y, placement.grid, placement.dx, placement.dy)
 

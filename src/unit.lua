@@ -205,10 +205,12 @@ function unit_splatter(id)
         })
       end
 
-      local squash_bounty = math.max(2, math.ceil(unit.bounty * 1.5))
       g_state.kills = g_state.kills + 1
-      effects_create_text(gx * k_dim_x, gy * k_dim_y, "$" .. tostring(squash_bounty))
-      svy_gain_bounty(squash_bounty)
+      if K_USE_MONEY then
+        local squash_bounty = math.max(2, math.ceil(unit.bounty * 1.5))
+        effects_create_text(gx * k_dim_x, gy * k_dim_y, "$" .. tostring(squash_bounty))
+        svy_gain_bounty(squash_bounty)
+      end
       unit_remove(id)
     else
       unit_apply_damage(id, K_SQUASH_DAMAGE * unit.healthmax)
