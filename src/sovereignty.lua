@@ -17,7 +17,7 @@ function svy_init()
     protectee_idxs = {castle_id},
     money = tern(g_debug_mode, 300, 35),
     moneycap = 100,
-    hp = 10,
+    hp = 10, -- TODO: hp bar
     hpmax = 10,
     income_timer = 0,
     income_rate = 1.5,
@@ -260,12 +260,10 @@ function svy_draw_spiel()
   
   if svy.drown_warning_timer >= 3 then
     -- red
-    love.graphics.setColor(1, 0.2, 0.2)
+    local p = math.sin(g_state.real_time * math.tau)*0.5 + 0.5
+    p = math.round(p * 4) / 4 -- quantize
+    love.graphics.setColor(1, 0.2 + 0.5 * p, 0.2 * (1 - p))
     
-    -- blink
-    if g_state.real_time % 2 < 0.2 then
-      return
-    end
     s = "Water level rising!\n\nLet the water out!\n\nDestroy walls by placing\na block fully overtop."
   end
   
