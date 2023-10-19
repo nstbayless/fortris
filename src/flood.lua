@@ -23,11 +23,16 @@ end
 function Flood:update()
   -- TODO: use svy, protectee
   --local protectee = static_get(self.svy.protectee_idxs[self.svy.protectee_idxs])
+  -- TODO: multiple protectees
+  local protectee = static_get(g_state.svy.protectee_idxs[1])
   self.sealed = not svy_goal_reachable()
+  
   self.flood_map = BoolField.new()
   if self.sealed then
+    board_push_temporary_change_from_grid(protectee.x, protectee.y, protectee.grid, K_IMPATHABLE, 0)
     local x, y = svy_get_any_goal_coordinates()
     self.flood_tiles = board_floodfill(x, y, K_IMPATHABLE)
+    board_pop_temporary_change()
     for i, tile in ipairs(self.flood_tiles) do
       self.flood_map:set(tile.x, tile.y, true)
     end

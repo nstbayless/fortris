@@ -4,7 +4,7 @@ K_ROCK = 0x02
 K_TREE = 0x04
 K_DECAL = 0x10
 K_STATIC = 0x100 -- "statics" (buildings, generally)
-K_STATIC_OBSTRUCTION = 0x200
+K_STATIC_OBSTRUCTION = 0x200 -- some statics obstruct, and some don't.
 K_FOG_OF_WAR = 0x400
 K_VARIANT = 0x800 -- for display randomness.
 K_VARIANT2 = 0x1000 -- for extra display randomness.
@@ -17,7 +17,7 @@ K_STATIC_ALL = bit.bor(K_STATIC, K_STATIC_OBSTRUCTION)
 K_OBSTRUCTION = bit.bor(K_FEATURE_MASK_OBSTRUCTION, K_STATIC_OBSTRUCTION)
 K_IMPATHABLE = bit.bor(K_OBSTRUCTION, K_TREE)
 K_VARIANTS = bit.bor(K_VARIANT, K_VARIANT2)
-K_REMOVE_IF_DESTROYED = bit.bor(K_STATIC, bit.bor(K_OBSTRUCTION, K_IMPATHABLE))
+K_REMOVE_IF_DESTROYED = bit.bor(K_STATIC, K_IMPATHABLE)
 
 -- board event types
 K_BOARD_EVENT_SET = 0 -- occurs when tile changes
@@ -529,7 +529,7 @@ function board_floodfill(x, y, obstruction_mask)
           visited[x][y] = true
 
           -- Check if the current cell is pathable
-          if bit.band(board_get_value(x, y), 0xFF) == 0 then
+          if bit.band(board_get_value(x, y), obstruction_mask) == 0 then
               -- Add to reachable list
               reachable[#reachable+1] = {x=x, y=y}
 

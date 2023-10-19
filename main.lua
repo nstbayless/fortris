@@ -1,4 +1,3 @@
--- allow debugging
 if arg and arg[#arg] == "vsc_debug" then require("lldebugger").start() end
 
 -- operating system
@@ -305,7 +304,6 @@ function spawn_monsters(dt)
 end
 
 function love.update(dt)
-
   -- round dt to power of 2 of a second
   -- this ensures it has a simple representation as a floating point number.
   -- (prevents certain classes of bugs)
@@ -394,4 +392,4 @@ function love.update(dt)
   if demo_is_recording() and key_pressed("save_demo") then
     demo_save()
   end
-end
+end 
